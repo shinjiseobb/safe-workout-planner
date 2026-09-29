@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 맞춤형 운동 & 부상 방지 루틴 플래너</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- 헤더 -->
+    <header class="app-header">
+      <div class="logo-area">
+        <span class="shield-icon">🛡️</span>
+        <div>
+          <h1>SafeFit AI 플래너</h1>
+          <p class="subtitle">관절 부담 최소화 · 부상 방지 맞춤 분할 루틴</p>
+        </div>
+      </div>
+      <div class="header-badges">
+        <span class="badge badge-ai">Gemini Flash Lite</span>
+        <span class="badge badge-search">Serper 실시간 검색 연동</span>
+      </div>
+    </header>
+
+    <!-- 고정 경고 배지 (안전 규칙) -->
+    <section class="safety-banner">
+      <span class="warning-icon">⚠️</span>
+      <div>
+        <strong>즉시 중단 기준 (Stop Rule):</strong>
+        운동 중 '날카롭거나 찌르는 듯한 관절 통증', '관절 걸림 및 불안정성', '찌릿한 저림'이 감지되면 즉시 세트를 중단하고 휴식을 취해야 합니다.
+      </div>
+    </section>
+
+    <!-- 메인 레이아웃: 입력 폼 & 결과 영역 -->
+    <main class="main-content">
+      <!-- 1. 입력 폼 섹션 -->
+      <section class="form-card">
+        <h2 class="section-title">신체 상태 및 운동 환경 설정</h2>
+        <form id="plannerForm">
+          <!-- 기본 운동 정보 -->
+          <div class="form-group-row">
+            <div class="form-group">
+              <label for="goal">운동 목적 <span class="required">*</span></label>
+              <select id="goal" name="goal" required>
+                <option value="체력 증진">체력 및 활력 증진</option>
+                <option value="근비대">근비대 (근육량 증가)</option>
+                <option value="체지방 감량">체지방 감량 & 다이어트</option>
+                <option value="자세 교정">체형 및 관절 자세 교정</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="experience">운동 숙련도 <span class="required">*</span></label>
+              <select id="experience" name="experience" required>
+                <option value="입문">입문 (운동 6개월 미만)</option>
+                <option value="중급">중급 (1~3년 이상 꾸준히 운동)</option>
+                <option value="상급">상급 (3년 이상 고강도 훈련 가능)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group-row">
+            <div class="form-group">
+              <label for="days_per_week">주당 운동 일수 <span class="required">*</span></label>
+              <select id="days_per_week" name="days_per_week" required>
+                <option value="2">주 2일 (전신 안전 분할)</option>
+                <option value="3" selected>주 3일 (무분할 또는 상하체)</option>
+                <option value="4">주 4일 (상체/하체 2분할)</option>
+                <option value="5">주 5일 (부위별 안전 세분화)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="session_duration">1회 운동 시간 <span class="required">*</span></label>
+              <select id="session_duration" name="session_duration" required>
+                <option value="40">40분 (핵심 압축형)</option>
+                <option value="50" selected>50분 (표준 웜업+본운동)</option>
+                <option value="60">60분 (충분한 휴식형)</option>
+                <option value="75">75분 (보강 운동 포함)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="environment">장비 및 운동 환경 <span class="required">*</span></label>
+            <select id="environment" name="environment" required>
+              <option value="맨몸">맨몸 및 밴드 운동 (홈트레이닝)</option>
+              <option value="홈짐 덤벨" selected>홈짐 / 조절식 덤벨 환경</option>
+              <option value="헬스장">피트니스 센터 (머신 & 프리웨이트 풀옵션)</option>
+            </select>
+          </div>
+
+          <!-- 관절 통증 및 불편 부위 선택 -->
+          <div class="form-group">
+            <label>불편하거나 주의가 필요한 관절 부위 (복수 선택 가능)</label>
+            <div class="checkbox-grid">
+              <label class="chip-item"><input type="checkbox" name="pain_area" value="목"> 목</label>
+              <label class="chip-item"><input type="checkbox" name="pain_area" value="어깨"> 어깨</label>
+              <label class="chip-item"><input type="checkbox" name="pain_area" value="팔꿈치"> 팔꿈치</label>
+              <label class="chip-item"><input type="checkbox" name="pain_area" value="손목"> 손목</label>
+              <label class="chip-item"><input type="checkbox" name="pain_area" value="허리"> 허리</label>
+              <label class="chip-item"><input type="checkbox" name="pain_area" value="고관절"> 고관절</label>
+              <label class="chip-item"><input type="checkbox" name="pain_area" value="무릎"> 무릎</label>
+              <label class="chip-item"><input type="checkbox" name="pain_area" value="발목"> 발목</label>
+            </div>
+          </div>
+
+          <!-- 통증 척도 슬라이더 -->
+          <div class="form-group">
+            <div class="slider-header">
+              <label for="pain_level">현재 관절 통증/불편 강도: <span id="painLevelText" class="pain-score">1점 (경미한 뻐근함)</span></label>
+            </div>
+            <input type="range" id="pain_level" name="pain_level" min="1" max="5" value="1" step="1" class="slider">
+            <div class="slider-marks">
+              <span>1점 (경미)</span>
+              <span>2점 (가벼움)</span>
+              <span>3점 (보통 통증)</span>
+              <span class="danger-mark">4점 (심한 통증)</span>
+              <span class="danger-mark">5점 (극심)</span>
+            </div>
+            <p class="field-hint">※ 통증 강도가 4점 이상일 경우 위험 방지를 위해 운동 생성이 자동 중단됩니다.</p>
+          </div>
+
+          <!-- 고위험 징후 체크 -->
+          <div class="danger-check-box">
+            <div class="danger-check-title">🚨 고위험 신호 체크 (하나라도 해당 시 전문의 상담 필수)</div>
+            <label class="checkbox-line">
+              <input type="checkbox" id="has_radiating_pain" name="has_radiating_pain">
+              <span>팔/다리로 뻗치는 방사통이나 찌릿한 저림 증상이 있습니다.</span>
+            </label>
+            <label class="checkbox-line">
+              <input type="checkbox" id="has_surgery" name="has_surgery">
+              <span>최근 6개월 이내 관절/척추 관련 수술 또는 시술을 받은 적이 있습니다.</span>
+            </label>
+          </div>
+
+          <!-- 추가 메모 -->
+          <div class="form-group">
+            <label for="notes">기타 피하고 싶은 동작이나 요청사항 (선택)</label>
+            <input type="text" id="notes" name="notes" placeholder="예: 무릎을 깊게 굽히는 풀스쿼트는 피하고 싶어요">
+          </div>
+
+          <!-- 면책 조항 동의 -->
+          <div class="disclaimer-agreement">
+            <label class="checkbox-line">
+              <input type="checkbox" id="disclaimer_agree" required>
+              <span class="disclaimer-text">
+                <strong>[필수]</strong> 본 서비스는 인공지능이 생성한 보조 가이드이며, <strong>의학적 진단 및 치료를 대체할 수 없음</strong>에 동의합니다. 통증 발생 시 즉각 중단하겠습니다.
+              </span>
+            </label>
+          </div>
+
+          <!-- 생성 버튼 -->
+          <button type="submit" id="submitBtn" class="btn btn-primary">
+            <span class="btn-text">안전 맞춤 루틴 생성하기</span>
+            <span class="btn-spinner hidden"></span>
+          </button>
+        </form>
+      </section>
+
+      <!-- 2. 결과 표시 영역 -->
+      <section id="resultSection" class="result-card hidden">
+        <!-- 결과 상단 헤더 & 복사/다운로드 도구모음 -->
+        <div class="result-header">
+          <div>
+            <h2 id="routineTitle" class="result-title">루틴 제목</h2>
+            <p id="summaryMessage" class="result-summary">루틴 요약 설명이 표시됩니다.</p>
+          </div>
+          <div class="action-buttons">
+            <button type="button" id="copyBtn" class="btn btn-outline">📋 텍스트 복사</button>
+            <button type="button" id="downloadMdBtn" class="btn btn-outline">💾 Markdown 저장</button>
+          </div>
+        </div>
+
+        <!-- 탭 네비게이션 -->
+        <div class="tab-nav">
+          <button type="button" class="tab-btn active" data-tab="splitTab">📅 안전 분할 루틴</button>
+          <button type="button" class="tab-btn" data-tab="replaceTab">🔄 1:1 관절 보호 대체 운동</button>
+          <button type="button" class="tab-btn" data-tab="careTab">🧘 부상 방지 웜업 & 쿨다운</button>
+        </div>
+
+        <!-- 탭 1: 분할 루틴 -->
+        <div id="splitTab" class="tab-pane active">
+          <div id="splitRoutineContainer" class="split-container"></div>
+        </div>
+
+        <!-- 탭 2: 1:1 관절 보호 대체 매핑 -->
+        <div id="replaceTab" class="tab-pane">
+          <div class="replace-intro">
+            💡 흔히 부상을 유발하는 고위험 표준 운동을 관절 압박을 완화한 안전 대체 종목으로 매핑한 표입니다.
+          </div>
+          <div id="replacementsContainer" class="replace-container"></div>
+        </div>
+
+        <!-- 탭 3: 부상 방지 케어 가이드 -->
+        <div id="careTab" class="tab-pane">
+          <div class="care-grid">
+            <div class="care-box">
+              <h3>🔥 타깃 관절 가동성 웜업</h3>
+              <ul id="warmupList" class="care-list"></ul>
+            </div>
+            <div class="care-box warning-care-box">
+              <h3>⚠️ 실패 지점 전 자세 붕괴 감지 팁</h3>
+              <p id="postureWarning" class="care-text"></p>
+            </div>
+            <div class="care-box">
+              <h3>🧊 관절 이완 & 스트레칭 쿨다운</h3>
+              <ul id="cooldownList" class="care-list"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. 고위험 Hard Stop 경고 모달 -->
+      <div id="hardStopModal" class="modal-backdrop hidden">
+        <div class="modal-card">
+          <div class="modal-icon">🚫</div>
+          <h2 class="modal-title">운동 생성 차단: 전문의 진료 권고</h2>
+          <div class="modal-reasons">
+            <strong>감지된 고위험 항목:</strong>
+            <ul id="hardStopReasonsList"></ul>
+          </div>
+          <p id="hardStopMessage" class="modal-message"></p>
+          <div class="modal-action">
+            <button type="button" id="closeModalBtn" class="btn btn-danger">내용 확인 및 닫기</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- 푸터 -->
+    <footer class="app-footer">
+      <p>SafeFit AI Planner · Powered by Gemini Flash Lite & Serper.dev · 안전을 최우선으로 설계된 재활 운동 가이드</p>
+    </footer>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

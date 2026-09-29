@@ -1,0 +1,341 @@
+/**
+ * SafeFit AI 플래너 - 프론트엔드 비즈니스 로직 (app.js)
+ */
+
+document.addEventListener("DOMContentLoaded", () => {
+  // DOM 요소 참조
+  const plannerForm = document.getElementById("plannerForm");
+  const painSlider = document.getElementById("pain_level");
+  const painLevelText = document.getElementById("painLevelText");
+  const submitBtn = document.getElementById("submitBtn");
+  const btnText = submitBtn.querySelector(".btn-text");
+  const btnSpinner = submitBtn.querySelector(".btn-spinner");
+
+  // 결과 영역 요소
+  const resultSection = document.getElementById("resultSection");
+  const routineTitle = document.getElementById("routineTitle");
+  const summaryMessage = document.getElementById("summaryMessage");
+  const splitRoutineContainer = document.getElementById("splitRoutineContainer");
+  const replacementsContainer = document.getElementById("replacementsContainer");
+  const warmupList = document.getElementById("warmupList");
+  const postureWarning = document.getElementById("postureWarning");
+  const cooldownList = document.getElementById("cooldownList");
+
+  // 모달 요소
+  const hardStopModal = document.getElementById("hardStopModal");
+  const hardStopReasonsList = document.getElementById("hardStopReasonsList");
+  const hardStopMessage = document.getElementById("hardStopMessage");
+  const closeModalBtn = document.getElementById("closeModalBtn");
+
+  // 도구 버튼
+  const copyBtn = document.getElementById("copyBtn");
+  const downloadMdBtn = document.getElementById("downloadMdBtn");
+
+  // 탭 버튼들
+  const tabBtns = document.querySelectorAll(".tab-btn");
+  const tabPanes = document.querySelectorAll(".tab-pane");
+
+  // 현재 생성된 최신 루틴 데이터 캐시 (복사 및 다운로드용)
+  let currentRoutineData = null;
+
+  // 1. 통증 슬라이더 레이블 실시간 동기화
+  const painDescriptions = {
+    1: "1점 (경미한 뻐근함)",
+    2: "2점 (가벼운 통증)",
+    3: "3점 (보통 통증, 세심한 주의 필요)",
+    4: "4점 (심한 통증 - 고위험 신호)",
+    5: "5점 (극심한 통증 - 즉각 진료 권고)"
+  };
+
+  painSlider.addEventListener("input", (e) => {
+    const val = e.target.value;
+    painLevelText.textContent = painDescriptions[val] || `${val}점`;
+    if (val >= 4) {
+      painLevelText.style.color = "#dc2626";
+    } else {
+      painLevelText.style.color = "#2563eb";
+    }
+  });
+
+  // 2. 탭 전환 처리
+  tabBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      tabBtns.forEach((b) => b.classList.remove("active"));
+      tabPanes.forEach((p) => p.classList.remove("active"));
+
+      btn.classList.add("active");
+      const targetId = btn.getAttribute("data-tab");
+      const targetPane = document.getElementById(targetId);
+      if (targetPane) {
+        targetPane.classList.add("active");
+      }
+    });
+  });
+
+  // 3. 모달 닫기 이벤트
+  closeModalBtn.addEventListener("click", () => {
+    hardStopModal.classList.add("hidden");
+  });
+
+  hardStopModal.addEventListener("click", (e) => {
+    if (e.target === hardStopModal) {
+      hardStopModal.classList.add("hidden");
+    }
+  });
+
+  // 4. Hard Stop 모달 표시 함수
+  function showHardStopModal(data) {
+    hardStopReasonsList.innerHTML = "";
+    (data.reasons || []).forEach((reason) => {
+      const li = document.createElement("li");
+      li.textContent = reason;
+      hardStopReasonsList.appendChild(li);
+    });
+    hardStopMessage.textContent = data.message || "고위험 신호가 감지되어 루틴 생성이 중단되었습니다.";
+    hardStopModal.classList.remove("hidden");
+  }
+
+  // 5. 로딩 상태 토글
+  function setLoadingState(isLoading) {
+    if (isLoading) {
+      submitBtn.disabled = true;
+      btnSpinner.classList.remove("hidden");
+      btnText.textContent = "AI 안전 가이드 검색 및 루틴 생성 중...";
+    } else {
+      submitBtn.disabled = false;
+      btnSpinner.classList.add("hidden");
+      btnText.textContent = "안전 맞춤 루틴 생성하기";
+    }
+  }
+
+  // 6. 결과 화면 렌더링
+  function renderRoutine(data) {
+    currentRoutineData = data;
+
+    // 제목 및 요약
+    routineTitle.textContent = data.routine_title || "맞춤형 관절 안전 운동 루틴";
+    summaryMessage.textContent = data.summary_message || "";
+
+    // 탭 1: 분할 루틴 렌더링
+    splitRoutineContainer.innerHTML = "";
+    (data.weekly_split || []).forEach((day) => {
+      const dayCard = document.createElement("div");
+      dayCard.className = "day-card";
+
+      let exercisesHtml = `
+        <table class="exercise-table">
+          <thead>
+            <tr>
+              <th style="width: 28%;">종목명</th>
+              <th style="width: 15%;">세트</th>
+              <th style="width: 15%;">반복</th>
+              <th style="width: 20%;">강도 (RIR)</th>
+              <th style="width: 22%;">관절 보호 팁</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      (day.exercises || []).forEach((ex) => {
+        exercisesHtml += `
+          <tr>
+            <td><strong>${escapeHtml(ex.name)}</strong></td>
+            <td>${escapeHtml(ex.sets)}</td>
+            <td>${escapeHtml(ex.reps)}</td>
+            <td><span class="rir-badge">${escapeHtml(ex.rir_guide)}</span></td>
+            <td><span class="form-tip-text">${escapeHtml(ex.form_tips)}</span></td>
+          </tr>
+        `;
+      });
+
+      exercisesHtml += `</tbody></table>`;
+
+      dayCard.innerHTML = `
+        <div class="day-header">
+          <span class="day-title">${escapeHtml(day.day_name)}</span>
+          <span class="day-focus">타깃: ${escapeHtml(day.target_focus)}</span>
+        </div>
+        ${exercisesHtml}
+      `;
+      splitRoutineContainer.appendChild(dayCard);
+    });
+
+    // 탭 2: 1:1 관절 보호 대체 매핑 렌더링
+    replacementsContainer.innerHTML = "";
+    if (data.joint_friendly_replacements && data.joint_friendly_replacements.length > 0) {
+      data.joint_friendly_replacements.forEach((rep) => {
+        const repCard = document.createElement("div");
+        repCard.className = "replace-card";
+        repCard.innerHTML = `
+          <div class="replace-header-row">
+            <span class="badge-standard">기존 위험: ${escapeHtml(rep.standard_exercise)}</span>
+            <span class="badge-arrow">➔</span>
+            <span class="badge-safe">안전 대체: ${escapeHtml(rep.safe_replacement)}</span>
+          </div>
+          <div class="replace-reason">
+            <strong>관절 보호 원리:</strong> ${escapeHtml(rep.biomechanical_reason)}
+          </div>
+        `;
+        replacementsContainer.appendChild(repCard);
+      });
+    } else {
+      replacementsContainer.innerHTML = "<p class='care-text'>별도의 대체 동작이 필요하지 않은 안전 종목 위주로 구성되었습니다.</p>";
+    }
+
+    // 탭 3: 케어 가이드 렌더링
+    warmupList.innerHTML = "";
+    const care = data.injury_prevention_care || {};
+    (care.target_warmup || []).forEach((item) => {
+      const li = document.createElement("li");
+      li.textContent = item;
+      warmupList.appendChild(li);
+    });
+
+    postureWarning.textContent = care.posture_collapse_warning || "자세가 무너지거나 타깃 부위 외 관절에 압박이 느껴지면 즉시 세트를 종료하세요.";
+
+    cooldownList.innerHTML = "";
+    (care.cooldown_routine || []).forEach((item) => {
+      const li = document.createElement("li");
+      li.textContent = item;
+      cooldownList.appendChild(li);
+    });
+
+    // 결과 창 표시 및 부드러운 스크롤 이동
+    resultSection.classList.remove("hidden");
+    resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // 7. 폼 제출 이벤트 핸들러
+  plannerForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const disclaimerCheckbox = document.getElementById("disclaimer_agree");
+    if (!disclaimerCheckbox.checked) {
+      alert("안전한 운동 진행을 위해 면책 조항 및 즉시 중단 기준에 동의해 주세요.");
+      return;
+    }
+
+    // 선택된 통증 부위 수집
+    const painCheckboxes = document.querySelectorAll("input[name='pain_area']:checked");
+    const painAreas = Array.from(painCheckboxes).map((cb) => cb.value);
+
+    const payload = {
+      goal: document.getElementById("goal").value,
+      experience: document.getElementById("experience").value,
+      days_per_week: parseInt(document.getElementById("days_per_week").value, 10),
+      session_duration: parseInt(document.getElementById("session_duration").value, 10),
+      environment: document.getElementById("environment").value,
+      pain_areas: painAreas,
+      pain_level: parseInt(painSlider.value, 10),
+      has_radiating_pain: document.getElementById("has_radiating_pain").checked,
+      has_surgery: document.getElementById("has_surgery").checked,
+      notes: document.getElementById("notes").value.trim()
+    };
+
+    setLoadingState(true);
+
+    try {
+      const response = await fetch("/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const resData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(resData.message || "서버 통신 중 오류가 발생했습니다.");
+      }
+
+      if (resData.status === "hard_stop") {
+        showHardStopModal(resData.data);
+      } else if (resData.status === "success") {
+        renderRoutine(resData.data);
+      } else {
+        alert(resData.message || "루틴을 생성할 수 없습니다.");
+      }
+    } catch (err) {
+      console.error("루틴 생성 요청 실패:", err);
+      alert(`오류 발생: ${err.message}`);
+    } finally {
+      setLoadingState(false);
+    }
+  });
+
+  // 8. 텍스트 복사 기능
+  copyBtn.addEventListener("click", () => {
+    if (!currentRoutineData) return;
+    const textContent = formatRoutineToMarkdown(currentRoutineData);
+    navigator.clipboard.writeText(textContent)
+      .then(() => alert("운동 루틴 내용이 클립보드에 복사되었습니다!"))
+      .catch(() => alert("클립보드 복사에 실패했습니다."));
+  });
+
+  // 9. Markdown 파일 다운로드 기능
+  downloadMdBtn.addEventListener("click", () => {
+    if (!currentRoutineData) return;
+    const mdContent = formatRoutineToMarkdown(currentRoutineData);
+    const blob = new Blob([mdContent], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `SafeFit_AI_Routine_${new Date().toISOString().slice(0, 10)}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  // 헬퍼: HTML 특수문자 이스케이프 (XSS 방지)
+  function escapeHtml(str) {
+    if (!str) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  // 헬퍼: JSON 데이터를 깔끔한 Markdown 문자열로 변환
+  function formatRoutineToMarkdown(data) {
+    let md = `# 🛡️ ${data.routine_title || "SafeFit 맞춤 운동 루틴"}\n\n`;
+    md += `> **루틴 개요**: ${data.summary_message || ""}\n\n`;
+    md += `---\n\n`;
+
+    md += `## 📅 주간 안전 분할 루틴\n\n`;
+    (data.weekly_split || []).forEach((day) => {
+      md += `### ${day.day_name} (타깃: ${day.target_focus})\n`;
+      md += `| 종목명 | 세트 | 반복 | RIR 강도 | 관절 보호 팁 |\n`;
+      md += `| :--- | :--- | :--- | :--- | :--- |\n`;
+      (day.exercises || []).forEach((ex) => {
+        md += `| ${ex.name} | ${ex.sets} | ${ex.reps} | ${ex.rir_guide} | ${ex.form_tips} |\n`;
+      });
+      md += `\n`;
+    });
+
+    md += `## 🔄 1:1 관절 보호 대체 매핑\n\n`;
+    (data.joint_friendly_replacements || []).forEach((rep) => {
+      md += `- **기존 표준 운동**: ${rep.standard_exercise}\n`;
+      md += `  - **안전 대체 운동**: ${rep.safe_replacement}\n`;
+      md += `  - **관절 보호 원리**: ${rep.biomechanical_reason}\n\n`;
+    });
+
+    const care = data.injury_prevention_care || {};
+    md += `## 🧘 부상 방지 케어 가이드\n\n`;
+    md += `### 🔥 타깃 웜업\n`;
+    (care.target_warmup || []).forEach((w) => {
+      md += `- ${w}\n`;
+    });
+    md += `\n### ⚠️ 자세 붕괴 경고 신호\n`;
+    md += `${care.posture_collapse_warning || ""}\n\n`;
+    md += `### 🧊 쿨다운 스트레칭\n`;
+    (care.cooldown_routine || []).forEach((c) => {
+      md += `- ${c}\n`;
+    });
+
+    return md;
+  }
+});
