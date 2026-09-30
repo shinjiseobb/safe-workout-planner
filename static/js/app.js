@@ -296,21 +296,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 2. 탭 전환 처리
-  tabBtns.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      tabBtns.forEach((b) => b.classList.remove("active"));
-      tabPanes.forEach((p) => p.classList.remove("active"));
-
-      btn.classList.add("active");
-      const targetId = btn.getAttribute("data-tab");
-      const targetPane = document.getElementById(targetId);
-      if (targetPane) {
-        targetPane.classList.add("active");
-      }
-    });
-  });
-
   // 3. 모달 닫기 이벤트
   closeModalBtn.addEventListener("click", () => {
     hardStopModal.classList.add("hidden");
