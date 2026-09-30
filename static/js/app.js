@@ -14,15 +14,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const hasSurgery = document.getElementById("has_surgery");
   const riskAlertText = document.getElementById("riskAlertText");
 
+  // 신체 스펙 및 최초 사용자 영역 요소
+  const firstTimeUserSection = document.getElementById("firstTimeUserSection");
+  const userHeightInput = document.getElementById("user_height");
+  const userWeightInput = document.getElementById("user_weight");
+  const userStrengthInput = document.getElementById("user_strength");
+
   // 결과 영역 요소
   const resultSection = document.getElementById("resultSection");
   const routineTitle = document.getElementById("routineTitle");
   const summaryMessage = document.getElementById("summaryMessage");
-  const splitRoutineContainer = document.getElementById("splitRoutineContainer");
-  const replacementsContainer = document.getElementById("replacementsContainer");
-  const warmupList = document.getElementById("warmupList");
-  const postureWarning = document.getElementById("postureWarning");
-  const cooldownList = document.getElementById("cooldownList");
+  const routineFlowContainer = document.getElementById("routineFlowContainer");
+  const statWarningBanner = document.getElementById("statWarningBanner");
+  const statWarningText = document.getElementById("statWarningText");
 
   // 모달 요소
   const hardStopModal = document.getElementById("hardStopModal");
@@ -51,10 +55,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const achievementSlider = document.getElementById("achievementSlider");
   const achievementLevelText = document.getElementById("achievementLevelText");
   let loadedHistory = [];
-
-  // 탭 버튼들
-  const tabBtns = document.querySelectorAll(".tab-btn");
-  const tabPanes = document.querySelectorAll(".tab-pane");
 
   // 현재 생성된 최신 루틴 데이터 캐시 (복사 및 다운로드용)
   let currentRoutineData = null;
@@ -200,6 +200,16 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("notes").value = profile.notes;
     }
 
+    if (userHeightInput && profile.user_height !== undefined && profile.user_height !== null) {
+      userHeightInput.value = profile.user_height;
+    }
+    if (userWeightInput && profile.user_weight !== undefined && profile.user_weight !== null) {
+      userWeightInput.value = profile.user_weight;
+    }
+    if (userStrengthInput && profile.user_strength !== undefined) {
+      userStrengthInput.value = profile.user_strength;
+    }
+
     updateRiskState();
   }
 
@@ -231,6 +241,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
           if (achievementSection) {
             achievementSection.classList.remove("hidden");
+          }
+
+          // 이전 일지가 로드되었으므로 최초 사용자 신체 정보 입력칸 자동 숨김
+          if (firstTimeUserSection) {
+            firstTimeUserSection.classList.add("hidden");
           }
 
           // 지난 회차 신체 상태 및 운동 환경 설정 복원 여부 확인창
@@ -309,7 +324,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 6. 결과 화면 렌더링
+  // 6. 결과 화면 렌더링 (단일 실전 루틴 플로우)
   function renderRoutine(data) {
     currentRoutineData = data;
 
@@ -317,21 +332,87 @@ document.addEventListener("DOMContentLoaded", () => {
     routineTitle.textContent = data.routine_title || "맞춤형 관절 안전 운동 루틴";
     summaryMessage.textContent = data.summary_message || "";
 
-    // 탭 1: 분할 루틴 렌더링
-    splitRoutineContainer.innerHTML = "";
-    (data.weekly_split || []).forEach((day) => {
-      const dayCard = document.createElement("div");
-      dayCard.className = "day-card";
+    // 비정상 신체 스펙(신장/체중) 감지 시 상단 안내 배너 노출
+    const heightVal = userHeightInput ? parseFloat(userHeightInput.value) : null;
+    const weightVal = userWeightInput ? parseFloat(userWeightInput.value) : null;
+    let statWarningMsg = "";
 
-      let exercisesHtml = `<div class="exercise-list">`;
+    const isAbnormalHeight = heightVal && (heightVal < 100 || heightVal > 250);
+    const isAbnormalWeight = weightVal && (weightVal < 30 || weightVal > 200);
 
+    if (isAbnormalHeight && isAbnormalWeight) {
+      statWarningMsg = `입력하신 신장(${heightVal}cm)과 체중(${weightVal}kg)이 일반적인 범위를 벗어나 있습니다. 올바르게 기재하셨는지 확인해 주세요. 오타가 있다면 다음 회차 시 수정하시면 더욱 정밀한 가이드가 제공됩니다.`;
+    } else if (isAbnormalHeight) {
+      statWarningMsg = `입력하신 신장(${heightVal}cm)이 일반적인 범위를 벗어나 있습니다. 올바르게 기재하셨는지 확인해 주세요.`;
+    } else if (isAbnormalWeight) {
+      statWarningMsg = `입력하신 체중(${weightVal}kg)이 일반적인 범위를 벗어나 있습니다. 올바르게 기재하셨는지 확인해 주세요.`;
+    }
+
+    if (statWarningBanner && statWarningText) {
+      if (statWarningMsg) {
+        statWarningText.textContent = statWarningMsg;
+        statWarningBanner.classList.remove("hidden");
+      } else {
+        statWarningBanner.classList.add("hidden");
+      }
+    }
+
+    // 단일 실전 루틴 플로우 렌더링
+    routineFlowContainer.innerHTML = "";
+    const care = data.injury_prevention_care || {};
+    const warmupItems = care.target_warmup || [];
+    const cooldownItems = care.cooldown_routine || [];
+    const weeklySplit = data.weekly_split || [];
+
+    // STEP 1. 타깃 웜업 & 동적 스트레칭
+    const step1Block = document.createElement("div");
+    step1Block.className = "flow-step-block";
+    let step1ListHtml = "";
+    if (warmupItems.length > 0) {
+      step1ListHtml = `
+        <ul class="linear-care-list">
+          ${warmupItems.map((item, idx) => `
+            <li class="linear-care-item">
+              <span class="linear-care-num">${idx + 1}</span>
+              <span>${escapeHtml(item)}</span>
+            </li>
+          `).join("")}
+        </ul>
+      `;
+    } else {
+      step1ListHtml = `<p class="care-text">관절 가온을 위한 가벼운 동적 스트레칭 5분을 진행해 주세요.</p>`;
+    }
+
+    step1Block.innerHTML = `
+      <div class="step-header step-warmup-header">
+        <div class="step-tag-row">
+          <span class="step-badge badge-step1">STEP 1</span>
+          <span class="step-title">🔥 부상 방지 웜업 & 타깃 동적 스트레칭</span>
+        </div>
+        <span class="step-desc">체온 상승 및 관절 활성화 (약 5~10분)</span>
+      </div>
+      <div class="step-content-body">
+        ${step1ListHtml}
+      </div>
+    `;
+    routineFlowContainer.appendChild(step1Block);
+
+    // STEP 2. 본운동 (근력 / 머신 / 유산소)
+    const step2Block = document.createElement("div");
+    step2Block.className = "flow-step-block";
+
+    let splitDaysHtml = `<div class="split-container">`;
+    weeklySplit.forEach((day) => {
+      let dayExercisesHtml = `<div class="exercise-list">`;
       (day.exercises || []).forEach((ex) => {
-        exercisesHtml += `
+        const isSafeReplacement = Boolean(ex.is_replacement);
+        dayExercisesHtml += `
           <div class="exercise-item-card">
             <div class="ex-card-top">
               <div class="ex-title-wrap">
                 ${ex.body_part ? `<span class="body-part-badge">${escapeHtml(ex.body_part)}</span>` : ""}
                 <span class="ex-title">${escapeHtml(ex.name)}</span>
+                ${isSafeReplacement ? `<span class="safe-replacement-tag">🛡️ 관절 보호 대체</span>` : ""}
               </div>
               <span class="rir-badge">${escapeHtml(ex.rir_guide || "").replace(/RIR\s*/gi, "여유 ")}</span>
             </div>
@@ -346,58 +427,74 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         `;
       });
+      dayExercisesHtml += `</div>`;
 
-      exercisesHtml += `</div>`;
-
-      dayCard.innerHTML = `
-        <div class="day-header">
-          <span class="day-title">${escapeHtml(day.day_name)}</span>
-          <span class="day-focus">타깃: ${escapeHtml(day.target_focus)}</span>
+      splitDaysHtml += `
+        <div class="day-card">
+          <div class="day-header">
+            <span class="day-title">${escapeHtml(day.day_name)}</span>
+            <span class="day-focus">타깃: ${escapeHtml(day.target_focus)}</span>
+          </div>
+          ${dayExercisesHtml}
         </div>
-        ${exercisesHtml}
       `;
-      splitRoutineContainer.appendChild(dayCard);
     });
+    splitDaysHtml += `</div>`;
 
-    // 탭 2: 1:1 관절 보호 대체 매핑 렌더링
-    replacementsContainer.innerHTML = "";
-    if (data.joint_friendly_replacements && data.joint_friendly_replacements.length > 0) {
-      data.joint_friendly_replacements.forEach((rep) => {
-        const repCard = document.createElement("div");
-        repCard.className = "replace-card";
-        repCard.innerHTML = `
-          <div class="replace-header-row">
-            <span class="badge-standard">기존 위험: ${escapeHtml(rep.standard_exercise)}</span>
-            <span class="badge-arrow">➔</span>
-            <span class="badge-safe">안전 대체: ${escapeHtml(rep.safe_replacement)}</span>
-          </div>
-          <div class="replace-reason">
-            <strong>관절 보호 원리:</strong> ${escapeHtml(rep.biomechanical_reason)}
-          </div>
-        `;
-        replacementsContainer.appendChild(repCard);
-      });
+    const postureTip = care.posture_collapse_warning
+      ? `<div class="posture-alert-bar">
+           <span>⚠️</span>
+           <span><strong>자세 붕괴 감지 팁:</strong> ${escapeHtml(care.posture_collapse_warning)}</span>
+         </div>`
+      : "";
+
+    step2Block.innerHTML = `
+      <div class="step-header step-main-header">
+        <div class="step-tag-row">
+          <span class="step-badge badge-step2">STEP 2</span>
+          <span class="step-title">💪 본운동 (통증 관절 보호 안전 루틴)</span>
+        </div>
+        <span class="step-desc">관절 통증 부위는 안전 대체 운동으로 자동 구성됨</span>
+      </div>
+      <div class="step-content-body">
+        ${splitDaysHtml}
+        ${postureTip}
+      </div>
+    `;
+    routineFlowContainer.appendChild(step2Block);
+
+    // STEP 3. 쿨다운 & 정적 스트레칭
+    const step3Block = document.createElement("div");
+    step3Block.className = "flow-step-block";
+    let step3ListHtml = "";
+    if (cooldownItems.length > 0) {
+      step3ListHtml = `
+        <ul class="linear-care-list">
+          ${cooldownItems.map((item, idx) => `
+            <li class="linear-care-item">
+              <span class="linear-care-num">${idx + 1}</span>
+              <span>${escapeHtml(item)}</span>
+            </li>
+          `).join("")}
+        </ul>
+      `;
     } else {
-      replacementsContainer.innerHTML = "<p class='care-text'>별도의 대체 동작이 필요하지 않은 안전 종목 위주로 구성되었습니다.</p>";
+      step3ListHtml = `<p class="care-text">심박수를 안정시키고 근육 긴장을 풀어주는 정적 스트레칭 5분을 진행해 주세요.</p>`;
     }
 
-    // 탭 3: 케어 가이드 렌더링
-    warmupList.innerHTML = "";
-    const care = data.injury_prevention_care || {};
-    (care.target_warmup || []).forEach((item) => {
-      const li = document.createElement("li");
-      li.textContent = item;
-      warmupList.appendChild(li);
-    });
-
-    postureWarning.textContent = care.posture_collapse_warning || "자세가 무너지거나 타깃 부위 외 관절에 압박이 느껴지면 즉시 세트를 종료하세요.";
-
-    cooldownList.innerHTML = "";
-    (care.cooldown_routine || []).forEach((item) => {
-      const li = document.createElement("li");
-      li.textContent = item;
-      cooldownList.appendChild(li);
-    });
+    step3Block.innerHTML = `
+      <div class="step-header step-cooldown-header">
+        <div class="step-tag-row">
+          <span class="step-badge badge-step3">STEP 3</span>
+          <span class="step-title">🧊 관절 이완 & 정적 스트레칭 쿨다운</span>
+        </div>
+        <span class="step-desc">심박 안정 및 피로 물질 회복 촉진 (약 5분)</span>
+      </div>
+      <div class="step-content-body">
+        ${step3ListHtml}
+      </div>
+    `;
+    routineFlowContainer.appendChild(step3Block);
 
     // 결과 창 표시 및 부드러운 스크롤 이동
     resultSection.classList.remove("hidden");
@@ -542,7 +639,10 @@ document.addEventListener("DOMContentLoaded", () => {
       has_surgery: document.getElementById("has_surgery").checked,
       notes: document.getElementById("notes").value.trim(),
       history: loadedHistory,
-      achievement_level: loadedHistory.length > 0 && achievementSlider ? parseInt(achievementSlider.value, 10) : null
+      achievement_level: loadedHistory.length > 0 && achievementSlider ? parseInt(achievementSlider.value, 10) : null,
+      user_height: userHeightInput && userHeightInput.value ? parseFloat(userHeightInput.value) : null,
+      user_weight: userWeightInput && userWeightInput.value ? parseFloat(userWeightInput.value) : null,
+      user_strength: userStrengthInput ? userStrengthInput.value.trim() : ""
     };
 
     // 비밀번호 입력 모달창 오픈
@@ -624,7 +724,10 @@ document.addEventListener("DOMContentLoaded", () => {
         pain_level: painSlider ? parseInt(painSlider.value, 10) : 1,
         has_radiating_pain: hasRadiatingPain ? hasRadiatingPain.checked : false,
         has_surgery: hasSurgery ? hasSurgery.checked : false,
-        notes: document.getElementById("notes") ? document.getElementById("notes").value.trim() : ""
+        notes: document.getElementById("notes") ? document.getElementById("notes").value.trim() : "",
+        user_height: userHeightInput && userHeightInput.value ? parseFloat(userHeightInput.value) : null,
+        user_weight: userWeightInput && userWeightInput.value ? parseFloat(userWeightInput.value) : null,
+        user_strength: userStrengthInput ? userStrengthInput.value.trim() : ""
       };
 
       const historyData = {
@@ -693,42 +796,53 @@ document.addEventListener("DOMContentLoaded", () => {
       .replace(/'/g, "&#039;");
   }
 
-  // 헬퍼: JSON 데이터를 깔끔한 Markdown 문자열로 변환
+  // 헬퍼: JSON 데이터를 깔끔한 Markdown 문자열로 변환 (STEP 1 -> STEP 2 -> STEP 3 단일 플로우)
   function formatRoutineToMarkdown(data) {
     let md = `# 🛡️ ${data.routine_title || "SafeFit 맞춤 운동 루틴"}\n\n`;
     md += `> **루틴 개요**: ${data.summary_message || ""}\n\n`;
     md += `---\n\n`;
 
-    md += `## 📅 주간 안전 분할 루틴\n\n`;
+    const care = data.injury_prevention_care || {};
+
+    // STEP 1. 웜업
+    md += `## 🔥 STEP 1. 부상 방지 웜업 & 타깃 동적 스트레칭\n`;
+    (care.target_warmup || []).forEach((w, idx) => {
+      md += `${idx + 1}. ${w}\n`;
+    });
+    md += `\n---\n\n`;
+
+    // STEP 2. 본운동
+    md += `## 💪 STEP 2. 본운동 (통증 관절 보호 안전 루틴)\n\n`;
     (data.weekly_split || []).forEach((day) => {
       md += `### ${day.day_name} (타깃: ${day.target_focus})\n`;
       md += `| 부위 | 종목명 | 세트 | 반복 | 여유 횟수 | 관절 보호 팁 |\n`;
       md += `| :--- | :--- | :--- | :--- | :--- | :--- |\n`;
       (day.exercises || []).forEach((ex) => {
         const rirText = String(ex.rir_guide || "").replace(/RIR\s*/gi, "여유 ");
-        md += `| ${ex.body_part || "전신"} | ${ex.name} | ${ex.sets} | ${ex.reps} | ${rirText} | ${ex.form_tips} |\n`;
+        const safeTag = ex.is_replacement ? " [🛡️관절보호 대체]" : "";
+        md += `| ${ex.body_part || "전신"} | ${ex.name}${safeTag} | ${ex.sets} | ${ex.reps} | ${rirText} | ${ex.form_tips} |\n`;
       });
       md += `\n`;
     });
 
-    md += `## 🔄 1:1 관절 보호 대체 매핑\n\n`;
-    (data.joint_friendly_replacements || []).forEach((rep) => {
-      md += `- **기존 표준 운동**: ${rep.standard_exercise}\n`;
-      md += `  - **안전 대체 운동**: ${rep.safe_replacement}\n`;
-      md += `  - **관절 보호 원리**: ${rep.biomechanical_reason}\n\n`;
-    });
+    if (care.posture_collapse_warning) {
+      md += `> ⚠️ **자세 붕괴 감지 팁**: ${care.posture_collapse_warning}\n\n`;
+    }
 
-    const care = data.injury_prevention_care || {};
-    md += `## 🧘 부상 방지 케어 가이드\n\n`;
-    md += `### 🔥 타깃 웜업\n`;
-    (care.target_warmup || []).forEach((w) => {
-      md += `- ${w}\n`;
-    });
-    md += `\n### ⚠️ 자세 붕괴 경고 신호\n`;
-    md += `${care.posture_collapse_warning || ""}\n\n`;
-    md += `### 🧊 쿨다운 스트레칭\n`;
-    (care.cooldown_routine || []).forEach((c) => {
-      md += `- ${c}\n`;
+    if (data.joint_friendly_replacements && data.joint_friendly_replacements.length > 0) {
+      md += `### 🔄 적용된 관절 보호 대체 매핑 참고\n`;
+      data.joint_friendly_replacements.forEach((rep) => {
+        md += `- **표준 운동**: ${rep.standard_exercise} ➔ **안전 대체**: ${rep.safe_replacement} (${rep.biomechanical_reason})\n`;
+      });
+      md += `\n`;
+    }
+
+    md += `---\n\n`;
+
+    // STEP 3. 쿨다운
+    md += `## 🧊 STEP 3. 관절 이완 & 정적 스트레칭 쿨다운\n`;
+    (care.cooldown_routine || []).forEach((c, idx) => {
+      md += `${idx + 1}. ${c}\n`;
     });
 
     const historyList = data._workout_history || [];

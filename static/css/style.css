@@ -268,7 +268,7 @@ body {
   color: var(--danger-border);
 }
 
-select, input[type="text"] {
+select, input[type="text"], input[type="number"] {
   width: 100%;
   padding: 12px 14px;
   font-size: 0.95rem;
@@ -280,10 +280,46 @@ select, input[type="text"] {
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-select:focus, input[type="text"]:focus {
+select:focus, input[type="text"]:focus, input[type="number"]:focus {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.unit-text {
+  font-size: 0.82rem;
+  color: var(--gray-500);
+  font-weight: normal;
+}
+
+/* 최초 사용자용 신체 스펙 박스 */
+.first-time-user-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid var(--primary-color);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  margin-bottom: 22px;
+  transition: all 0.3s ease;
+}
+
+.box-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.box-title-badge {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--gray-900);
+}
+
+.box-sub-desc {
+  font-size: 0.82rem;
+  color: var(--gray-500);
 }
 
 /* 관절 칩 체크박스 그리드 */
@@ -579,9 +615,184 @@ select:focus, input[type="text"]:focus {
   gap: 10px;
 }
 
-/* 탭 네비게이션 */
-.tab-nav {
+/* 비정상 신체 정보 감지 알림 배너 */
+.stat-warning-banner {
   display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background-color: #fefce8;
+  border: 1px solid #fef08a;
+  border-left: 4px solid #ca8a04;
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  margin-bottom: 22px;
+  color: #713f12;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.stat-warning-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.stat-warning-content strong {
+  color: #854d0e;
+  margin-right: 4px;
+}
+
+/* 단일 실전 루틴 플로우 컨테이너 */
+.routine-flow-container {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+/* STEP 섹션 블록 */
+.flow-step-block {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--gray-200);
+  background: #ffffff;
+}
+
+.step-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.step-warmup-header {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-bottom: 1px solid #bfdbfe;
+}
+
+.step-main-header {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border-bottom: 1px solid #bbf7d0;
+}
+
+.step-cooldown-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.step-tag-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.step-badge {
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+}
+
+.badge-step1 {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+.badge-step2 {
+  background-color: #16a34a;
+  color: #ffffff;
+}
+
+.badge-step3 {
+  background-color: #475569;
+  color: #ffffff;
+}
+
+.step-title {
+  font-size: 1.12rem;
+  font-weight: 700;
+  color: var(--gray-900);
+}
+
+.step-desc {
+  font-size: 0.85rem;
+  color: var(--gray-600);
+}
+
+.step-content-body {
+  padding: 20px;
+}
+
+/* 웜업/쿨다운 체크리스트 스타일 */
+.linear-care-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+}
+
+.linear-care-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background-color: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  font-size: 0.92rem;
+  color: var(--gray-800);
+  line-height: 1.5;
+}
+
+.linear-care-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background-color: var(--primary-light);
+  color: var(--primary-color);
+  font-weight: 700;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* 본운동 관절 대체 뱃지 */
+.safe-replacement-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background-color: #d1fae5;
+  color: #065f46;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid #a7f3d0;
+}
+
+/* 자세 붕괴 주의 알림 상자 */
+.posture-alert-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background-color: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  color: var(--warning-text);
+  font-size: 0.88rem;
+  margin-top: 14px;
+}
+
+/* 탭 네비게이션 (하위 호환) */
+.tab-nav {
+  display: none;
   gap: 10px;
   border-bottom: 1px solid var(--gray-200);
   margin-bottom: 24px;

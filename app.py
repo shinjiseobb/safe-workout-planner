@@ -219,6 +219,38 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
     else:
         cardio_instruction = "\n[유산소 지침]: 사용자가 유산소 미포함을 선택했으므로 순수 근력/웨이트 트레이닝 종목으로만 구성하세요."
 
+    user_height = user_profile.get("user_height")
+    user_weight = user_profile.get("user_weight")
+    user_strength = user_profile.get("user_strength")
+
+    physical_info_text = ""
+    if user_height or user_weight or user_strength:
+        physical_info_text = f"""
+- 신장: {f'{user_height}cm' if user_height else '미입력'}
+- 체중: {f'{user_weight}kg' if user_weight else '미입력'}
+- 평소 다루는 무게/근력 상태: {user_strength if user_strength else '미입력'}"""
+
+    # 환경 변경 감지 및 기구 전환 규칙
+    last_env = None
+    if history:
+        last_session = history[-1]
+        last_env = last_session.get("environment")
+
+    current_env = user_profile.get("environment")
+    env_transition_rule = ""
+    if last_env and last_env != current_env:
+        if current_env == "헬스장":
+            env_transition_rule = f"""
+[★중요★ 운동 환경 변경 감지: {last_env} ➔ 헬스장(피트니스 센터)]
+- 사용자가 이전 회차의 '{last_env}'에서 '헬스장'으로 환경을 변경했습니다!
+- 이전 세션의 덤벨 운동 기록에 얽매이지 말고, 랫풀다운, 시티드로우 머신, 체스트프레스 머신, 케이블 크로스오버, 레그프레스 등 헬스장의 우수한 전문 핀머신과 케이블 기구를 적극 반영하여 루틴을 전면 재구성하세요. (단, 통증 관절 안전 원칙은 최우선 유지)
+"""
+        elif current_env in ["홈짐 덤벨", "맨몸"]:
+            env_transition_rule = f"""
+[★중요★ 운동 환경 변경 감지: {last_env} ➔ {current_env}]
+- 환경이 '{current_env}'로 변경되었으므로, 해당 환경에서 구비 가능한 도구(덤벨/맨몸/밴드)에 완벽히 최적화된 종목으로 재배치하세요.
+"""
+
     prompt = f"""
 당신은 부상 예방 및 재활 운동역학 전문 시니어 스트렝스 코치입니다.
 사용자의 신체 상태, 통증 부위, 운동 환경에 맞추어 관절 부담을 최소화한 맞춤형 운동 루틴을 작성하세요.
@@ -228,23 +260,28 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
 - 숙련도: {user_profile.get('experience')}
 - 운동 분할 방식: {user_profile.get('split_routine', '2분할')}
 - 1회 운동 시간: {user_profile.get('session_duration')}분
-- 장비 환경: {user_profile.get('environment')}
+- 장비 환경: {current_env}
 - 유산소 옵션: {cardio_desc_map.get(cardio_option, '미포함')}
 - 통증 및 불편 부위: {', '.join(user_profile.get('pain_areas', [])) if user_profile.get('pain_areas') else '없음'}
 - 통증 강도: {user_profile.get('pain_level')}단계 (1~5단계 중)
-- 기타 주의사항: {user_profile.get('notes', '없음')}
+- 기타 주의사항: {user_profile.get('notes', '없음')}{physical_info_text}
 {history_feedback_section}
+{env_transition_rule}
 {cardio_instruction}
 [실시간 웹 검색 레퍼런스 (Serper.dev 수집 데이터)]
 {search_context}
 
-[작성 및 설계 지침]
-1. 통증 부위에 전단력(Shear force)이나 압박 부하가 큰 고위험 종목은 완전히 배제하세요.
-2. 각 종목마다 여유 횟수(자세가 무너지지 않고 더 들 수 있는 여유 반복 수, 예: 여유 2~3회) 가이드를 명시하여 무리한 한계 도달(실패 지점)을 엄격히 방지하세요.
-3. 각 운동 종목에는 주요 대상 '부위(body_part)'를 가슴, 등, 어깨, 하체, 팔, 복근/코어, 유산소, 전신 중 하나로 명확히 표기하세요.
-4. 1:1 관절 보호 대체 매핑 섹션에서는 흔히 다치는 '표준 운동'을 어떤 '대체 운동'으로 바꿨는지와 그 이유(관절 보호 원리)를 설명하세요.
-5. 부상 방지 케어 가이드에는 타깃 웜업, 실패 지점 도달 전 자세 붕괴 감지 팁, 쿨다운을 반드시 포함하세요.
-6. 사용자가 선택한 운동 분할 방식('{user_profile.get('split_routine', '2분할')}')에 맞추어 weekly_split의 각 일차(day_name 및 target_focus)를 정확히 구성하세요. (예: 무분할=전신 루틴, 2분할=1일차 상체/2일차 하체, 3분할=1일차 밀기(Push)/2일차 당기기(Pull)/3일차 하체(Legs), 4분할=가슴/등/어깨/하체)
+[작성 및 설계 핵심 원칙]
+1. [관절 안전 최우선 원칙]:
+   - 통증 부위가 체크된 경우, 해당 관절에 전단력(Shear force)이나 압박 부하가 큰 일반 표준 운동을 배제하고, 반드시 관절 보호 대체 운동(예: 어깨 통증 시 플로어 프레스 or 뉴트럴 그립 머신 프레스, 무릎 통증 시 박스 스쿼트 or 레그 익스텐션 제한 각도)으로 본운동(exercises) 목록 자체에 직접 처방하세요.
+   - 통증이 전혀 없는 부위는 건강한 자극을 위한 일반 정석 복합 다관절 운동을 자신 있게 배정하세요.
+2. [스마트 종목 로테이션 규칙]:
+   - 동일한 분할이라도 이전 회차의 종목을 기계적으로 복사하지 말고, 메인 종목의 그립/각도 변주(예: 플랫 ➔ 인클라인, 와이드 ➔ 뉴트럴) 및 보조 종목(머신/덤벨/케이블)을 신선하게 로테이션하여 다양한 근섬유를 동원하세요. (단, 횟수 강제 상향은 하지 말고 사용자의 성취도 가이드에 맞추세요)
+3. [단일 실전 플로우 통합 설계]:
+   - 웜업(동적 스트레칭)부터 본운동(근력/유산소), 쿨다운(정적 스트레칭)까지 사용자가 순서대로 바로 따라할 수 있도록 일관된 플로우로 구성하세요.
+4. [안전 여유 횟수]: 각 종목마다 무리한 실패 지점에 도달하지 않도록 여유 횟수(예: 여유 2~3회)를 명시하세요.
+5. [부위 표기]: 각 운동 종목에는 주요 대상 '부위(body_part)'를 가슴, 등, 어깨, 하체, 팔, 복근/코어, 유산소, 전신 중 하나로 명확히 표기하세요.
+6. 사용자가 선택한 운동 분할 방식('{user_profile.get('split_routine', '2분할')}')에 맞추어 weekly_split의 각 일차(day_name 및 target_focus)를 정확히 구성하세요.
 
 [반드시 준수할 출력 형식]
 아래 JSON 스키마를 만족하는 순수 JSON 형식으로만 응답하세요. 백틱(```json) 마크다운 문법을 제외하고 오직 유효한 JSON 문자열만 출력해야 합니다.
@@ -259,10 +296,11 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
       "exercises": [
         {{
           "body_part": "부위 (가슴 / 등 / 어깨 / 하체 / 팔 / 복근 / 유산소 중 택1)",
-          "name": "운동 종목명",
+          "name": "운동 종목명 (통증 부위는 관절 보호 안전 종목으로 직접 배치)",
           "sets": "3세트 또는 15분",
           "reps": "12-15회 또는 심박수 Zone 2 유지",
           "rir_guide": "여유 2~3회 또는 대화 가능한 수준",
+          "is_replacement": true,
           "form_tips": "관절 부담을 줄이는 안전 자세 핵심 포인트"
         }}
       ]
@@ -277,12 +315,12 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
   ],
   "injury_prevention_care": {{
     "target_warmup": [
-      "관절 가동성 및 활성화 웜업 동작 1",
-      "관절 가동성 및 활성화 웜업 동작 2"
+      "관절 가동성 및 활성화 웜업 동작 1 (횟수/시간 포함)",
+      "관절 가동성 및 활성화 웜업 동작 2 (횟수/시간 포함)"
     ],
     "posture_collapse_warning": "반복 중 자세가 무너지거나 타깃 근육 대신 관절로 무게가 쏠릴 때 나타나는 징후",
     "cooldown_routine": [
-      "긴장된 길항근 및 관절 주변부 스트레칭 동작 1",
+      "긴장된 길항근 및 관절 주변부 스트레칭 동작 1 (초/호흡 포함)",
       "호흡 및 긴장 완화 쿨다운 2"
     ]
   }}
@@ -626,8 +664,11 @@ def generate_routine():
         history = data.get("history", [])
         achievement_level = data.get("achievement_level")
         cardio_option = data.get("cardio_option", "none")
+        user_height = data.get("user_height")
+        user_weight = data.get("user_weight")
+        user_strength = data.get("user_strength", "")
 
-        logger.info(f"[요청 수신] 목적: {goal}, 분할: {split_routine}, 환경: {environment}, 유산소: {cardio_option}, 통증: {pain_level}단계")
+        logger.info(f"[요청 수신] 목적: {goal}, 분할: {split_routine}, 환경: {environment}, 유산소: {cardio_option}, 통증: {pain_level}단계, 신체: {user_height}cm/{user_weight}kg")
 
         # 0. 이용 비밀번호(PIN) 검증
         access_pin = str(data.get("access_pin", "")).strip()
@@ -662,7 +703,10 @@ def generate_routine():
             "pain_level": pain_level,
             "notes": notes,
             "history": history,
-            "achievement_level": achievement_level
+            "achievement_level": achievement_level,
+            "user_height": user_height,
+            "user_weight": user_weight,
+            "user_strength": user_strength
         }
         routine_json = generate_routine_with_gemini(user_profile, search_context)
 

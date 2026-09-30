@@ -112,6 +112,28 @@
             </div>
           </div>
 
+          <!-- 최초 사용자용 신체 스펙 및 근력 정보 (이전 일지 첨부 시 자동 숨김) -->
+          <div id="firstTimeUserSection" class="first-time-user-box">
+            <div class="box-title-row">
+              <span class="box-title-badge">👤 신체 스펙 & 근력 정보</span>
+              <span class="box-sub-desc">맞춤형 권장 중량 및 안전 가이드 산정에 활용됩니다 (최초 1회 작성)</span>
+            </div>
+            <div class="form-group-row">
+              <div class="form-group">
+                <label for="user_height">신장 (키) <span class="unit-text">(cm)</span></label>
+                <input type="number" id="user_height" name="user_height" placeholder="예: 175" min="50" max="300">
+              </div>
+              <div class="form-group">
+                <label for="user_weight">체중 (몸무게) <span class="unit-text">(kg)</span></label>
+                <input type="number" id="user_weight" name="user_weight" placeholder="예: 70" min="20" max="350">
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="user_strength">평소 다루는 무게 / 근력 상태 (자유 작성)</label>
+              <input type="text" id="user_strength" name="user_strength" placeholder="예: 덤벨 10kg 프레스 가능, 턱걸이 3개 가능, 헬스 완전 처음 등">
+            </div>
+          </div>
+
           <!-- 기본 운동 정보 -->
           <div class="form-group-row">
             <div class="form-group">
@@ -252,8 +274,17 @@
         </form>
       </section>
 
-      <!-- 2. 결과 표시 영역 -->
+      <!-- 2. 결과 표시 영역 (단일 실전 루틴 플로우) -->
       <section id="resultSection" class="result-card hidden">
+        <!-- 비정상 신체정보 입력 감지 안내 배너 -->
+        <div id="statWarningBanner" class="stat-warning-banner hidden">
+          <div class="stat-warning-icon">⚠️</div>
+          <div class="stat-warning-content">
+            <strong>입력 정보 확인 안내:</strong>
+            <span id="statWarningText"></span>
+          </div>
+        </div>
+
         <!-- 결과 상단 헤더 & 복사/다운로드 도구모음 -->
         <div class="result-header">
           <div>
@@ -267,43 +298,8 @@
           </div>
         </div>
 
-        <!-- 탭 네비게이션 -->
-        <div class="tab-nav">
-          <button type="button" class="tab-btn active" data-tab="splitTab">📅 안전 분할 루틴</button>
-          <button type="button" class="tab-btn" data-tab="replaceTab">🔄 1:1 관절 보호 대체 운동</button>
-          <button type="button" class="tab-btn" data-tab="careTab">🧘 부상 방지 웜업 & 쿨다운</button>
-        </div>
-
-        <!-- 탭 1: 분할 루틴 -->
-        <div id="splitTab" class="tab-pane active">
-          <div id="splitRoutineContainer" class="split-container"></div>
-        </div>
-
-        <!-- 탭 2: 1:1 관절 보호 대체 매핑 -->
-        <div id="replaceTab" class="tab-pane">
-          <div class="replace-intro">
-            💡 흔히 부상을 유발하는 고위험 표준 운동을 관절 압박을 완화한 안전 대체 종목으로 매핑한 표입니다.
-          </div>
-          <div id="replacementsContainer" class="replace-container"></div>
-        </div>
-
-        <!-- 탭 3: 부상 방지 케어 가이드 -->
-        <div id="careTab" class="tab-pane">
-          <div class="care-grid">
-            <div class="care-box">
-              <h3>🔥 타깃 관절 가동성 웜업</h3>
-              <ul id="warmupList" class="care-list"></ul>
-            </div>
-            <div class="care-box warning-care-box">
-              <h3>⚠️ 실패 지점 전 자세 붕괴 감지 팁</h3>
-              <p id="postureWarning" class="care-text"></p>
-            </div>
-            <div class="care-box">
-              <h3>🧊 관절 이완 & 스트레칭 쿨다운</h3>
-              <ul id="cooldownList" class="care-list"></ul>
-            </div>
-          </div>
-        </div>
+        <!-- 단일 실전 루틴 플로우 컨테이너 -->
+        <div id="routineFlowContainer" class="routine-flow-container"></div>
       </section>
 
       <!-- 3. 고위험 Hard Stop 경고 모달 -->
