@@ -39,12 +39,102 @@ body {
   background-color: #f3f6f9;
   color: var(--gray-900);
   line-height: 1.6;
-  padding: 24px 16px;
+  padding: 0 0 24px 0;
+}
+
+/* 상단 초슬림 PWA 앱 설치 배너 */
+.pwa-install-banner {
+  position: sticky;
+  top: 0;
+  z-index: 999;
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 8px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  font-size: 0.86rem;
+}
+
+.pwa-banner-inner {
+  max-width: 1060px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pwa-banner-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pwa-icon {
+  font-size: 1.15rem;
+}
+
+.pwa-text {
+  color: #e2e8f0;
+}
+
+.pwa-text strong {
+  color: #ffffff;
+}
+
+.pwa-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pwa-btn-install {
+  background-color: var(--primary-color);
+  color: #ffffff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.pwa-btn-install:hover {
+  background-color: var(--primary-hover);
+}
+
+.pwa-btn-close {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  line-height: 1;
+}
+
+.pwa-btn-close:hover {
+  color: #ffffff;
+}
+
+.ios-tooltip {
+  max-width: 1060px;
+  margin: 8px auto 0 auto;
+  background: rgba(30, 41, 59, 0.95);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  color: #f1f5f9;
+  font-size: 0.82rem;
+  padding: 8px 14px;
+  border-radius: 6px;
+  text-align: center;
 }
 
 .app-container {
   max-width: 1060px;
   margin: 0 auto;
+  padding: 20px 16px 0 16px;
 }
 
 /* 헤더 */

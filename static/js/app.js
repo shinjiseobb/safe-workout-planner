@@ -446,4 +446,62 @@ document.addEventListener("DOMContentLoaded", () => {
 
     return md;
   }
+
+  // =========================================================
+  // 10. PWA 스마트 앱 설치 배너 로직
+  // =========================================================
+  const pwaInstallBanner = document.getElementById("pwaInstallBanner");
+  const pwaInstallBtn = document.getElementById("pwaInstallBtn");
+  const pwaCloseBtn = document.getElementById("pwaCloseBtn");
+  const iosInstallTooltip = document.getElementById("iosInstallTooltip");
+
+  let deferredInstallPrompt = null;
+
+  // 이미 독립 실행형(Standalone, 앱 상태)으로 켜져 있는지 확인
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  const isBannerDismissed = sessionStorage.getItem("pwa_banner_dismissed") === "true";
+  const isIos = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+
+  if (!isStandalone && !isBannerDismissed) {
+    if (isIos) {
+      // iOS 사파리는 beforeinstallprompt 이벤트가 지원되지 않으므로 배너 노출
+      pwaInstallBanner.classList.remove("hidden");
+    }
+
+    // 안드로이드 / 크롬 / 엣지 등 PWA 설치 지원 브라우저
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      pwaInstallBanner.classList.remove("hidden");
+    });
+  }
+
+  // 설치 버튼 클릭
+  pwaInstallBtn.addEventListener("click", async () => {
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      const { outcome } = await deferredInstallPrompt.userChoice;
+      if (outcome === "accepted") {
+        pwaInstallBanner.classList.add("hidden");
+      }
+      deferredInstallPrompt = null;
+    } else if (isIos) {
+      // iOS의 경우 하단 공유 버튼 안내 툴팁 표시
+      iosInstallTooltip.classList.toggle("hidden");
+    } else {
+      alert("브라우저 오른쪽 상단 메뉴(⋮)에서 '홈 화면에 추가' 또는 '앱 설치'를 클릭해 주세요.");
+    }
+  });
+
+  // 닫기 버튼 클릭
+  pwaCloseBtn.addEventListener("click", () => {
+    pwaInstallBanner.classList.add("hidden");
+    sessionStorage.setItem("pwa_banner_dismissed", "true");
+  });
+
+  // 앱 설치 완료 감지 시 배너 숨김
+  window.addEventListener("appinstalled", () => {
+    pwaInstallBanner.classList.add("hidden");
+    deferredInstallPrompt = null;
+  });
 });

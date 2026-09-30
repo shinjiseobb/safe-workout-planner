@@ -2,14 +2,41 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>AI 맞춤형 운동 & 부상 방지 루틴 플래너</title>
+  
+  <!-- PWA 웹 앱 설정 -->
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="SafeFit">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+
   <link rel="stylesheet" href="/static/css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com">
   <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
+  <!-- 상단 초슬림 PWA 앱 설치 배너 -->
+  <aside id="pwaInstallBanner" class="pwa-install-banner hidden">
+    <div class="pwa-banner-inner">
+      <div class="pwa-banner-info">
+        <span class="pwa-icon">🛡️</span>
+        <span class="pwa-text"><strong>SafeFit 앱</strong>으로 주소창 없이 전체 화면으로 이용하세요</span>
+      </div>
+      <div class="pwa-banner-actions">
+        <button type="button" id="pwaInstallBtn" class="pwa-btn-install">앱 설치</button>
+        <button type="button" id="pwaCloseBtn" class="pwa-btn-close" aria-label="닫기">✕</button>
+      </div>
+    </div>
+    <!-- iOS 사파리 안내 툴팁 -->
+    <div id="iosInstallTooltip" class="ios-tooltip hidden">
+      하단 공유 버튼(<strong><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align: -2px;"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></strong>)을 누르고 <strong>'홈 화면에 추가'</strong>를 선택해 주세요!
+    </div>
+  </aside>
+
   <div class="app-container">
     <!-- 헤더 -->
     <header class="app-header">

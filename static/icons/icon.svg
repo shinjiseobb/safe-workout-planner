@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#14b8a6"/>
+      <stop offset="100%" stop-color="#0d9488"/>
+    </linearGradient>
+  </defs>
+  <!-- Background Circle -->
+  <rect width="512" height="512" rx="128" fill="url(#shieldGrad)"/>
+  <!-- Shield Outline -->
+  <path d="M256 90 L390 140 C390 280 256 390 256 390 C256 390 122 280 122 140 Z" fill="#ffffff" opacity="0.95"/>
+  <!-- Shield Inner Accent -->
+  <path d="M256 120 L360 160 C360 270 256 360 256 360 C256 360 152 270 152 160 Z" fill="url(#accentGrad)"/>
+  <!-- Checkmark / Safe Symbol -->
+  <path d="M210 240 L245 275 L315 200" fill="none" stroke="#ffffff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
