@@ -224,6 +224,21 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/manifest.json")
+def manifest():
+    """PWA 매니페스트 제공 (CORS 헤더 포함)"""
+    response = app.send_static_file("manifest.json")
+    response.headers["Content-Type"] = "application/manifest+json"
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    return response
+
+
+@app.route("/favicon.ico")
+def favicon():
+    """파비콘 제공"""
+    return app.send_static_file("icons/icon-192.png")
+
+
 @app.route("/generate", methods=["POST"])
 def generate_routine():
     """

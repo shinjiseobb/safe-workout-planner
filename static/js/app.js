@@ -463,12 +463,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const isIos = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
 
   if (!isStandalone && !isBannerDismissed) {
-    if (isIos) {
-      // iOS 사파리는 beforeinstallprompt 이벤트가 지원되지 않으므로 배너 노출
-      pwaInstallBanner.classList.remove("hidden");
-    }
+    // 앱이 설치되지 않은 상태라면 상단 배너를 항상 노출
+    pwaInstallBanner.classList.remove("hidden");
 
-    // 안드로이드 / 크롬 / 엣지 등 PWA 설치 지원 브라우저
+    // 안드로이드 / 크롬 / 엣지 등 네이티브 PWA 설치 이벤트 감지
     window.addEventListener("beforeinstallprompt", (e) => {
       e.preventDefault();
       deferredInstallPrompt = e;
