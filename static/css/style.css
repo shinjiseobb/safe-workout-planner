@@ -403,15 +403,25 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
 .slider-marks {
   display: flex;
   justify-content: space-between;
-  font-size: 0.8rem;
+  align-items: center;
+  font-size: 0.78rem;
   color: var(--gray-600);
   margin-top: 8px;
+  width: 100%;
 }
 
 .slider-marks span {
   white-space: nowrap;
   text-align: center;
-  font-size: 0.8rem;
+  flex: 1;
+}
+
+.slider-marks span:first-child {
+  text-align: left;
+}
+
+.slider-marks span:last-child {
+  text-align: right;
 }
 
 .danger-mark {
