@@ -345,8 +345,8 @@ def create_workout_excel_bytes(history: list) -> bytes:
         bottom=Side(style="thin", color="D1D5DB")
     )
 
-    # 1. 헤더 (관절 안전 자세 팁 제외 9개 열)
-    headers = ["회차", "날짜", "성취도", "분할/요일", "부위", "운동 종목명", "세트", "횟수", "여유 횟수"]
+    # 1. 헤더 (관절 안전 자세 팁 및 분할/요일 제외 8개 열)
+    headers = ["회차", "날짜", "성취도", "부위", "운동 종목명", "세트", "횟수", "여유 횟수"]
     ws.append(headers)
     ws.row_dimensions[1].height = 28
 
@@ -378,12 +378,13 @@ def create_workout_excel_bytes(history: list) -> bytes:
 
             raw_rir = str(ex.get("rir_guide", ""))
             clean_rir = re.sub(r'RIR\s*', '여유 ', raw_rir, flags=re.IGNORECASE)
+            # 괄호 및 괄호 안 설명 제거 (예: '여유 2회 (더 할 수 있을 거 같을 때 중단)' -> '여유 2회')
+            clean_rir = re.sub(r'\(.*?\)', '', clean_rir).strip()
 
             row_data = [
                 s_num,
                 s_date,
                 s_lvl,
-                ex.get("day", ""),
                 ex.get("body_part", "전신"),
                 ex.get("name", ""),
                 ex.get("sets", ""),
@@ -397,7 +398,7 @@ def create_workout_excel_bytes(history: list) -> bytes:
                 cell = ws.cell(row=current_row, column=col_idx)
                 cell.font = data_font
                 cell.border = thin_border
-                if col_idx == 6:  # 운동 종목명은 좌측 정렬
+                if col_idx == 5:  # 운동 종목명은 좌측 정렬 (E열)
                     cell.alignment = left_align
                 else:
                     cell.alignment = center_align
@@ -417,12 +418,11 @@ def create_workout_excel_bytes(history: list) -> bytes:
         "A": 11,  # 회차
         "B": 16,  # 날짜 (YYYY-MM-DD 안 잘림)
         "C": 14,  # 성취도
-        "D": 16,  # 분할/요일
-        "E": 12,  # 부위
-        "F": 35,  # 운동 종목명 (일반 셀 3칸 너비)
-        "G": 12,  # 세트
-        "H": 16,  # 횟수
-        "I": 18   # 여유 횟수
+        "D": 12,  # 부위
+        "E": 35,  # 운동 종목명 (일반 셀 3칸 너비)
+        "F": 12,  # 세트
+        "G": 16,  # 횟수
+        "H": 15   # 여유 횟수
     }
     for col_letter, width in col_widths.items():
         ws.column_dimensions[col_letter].width = width
@@ -489,7 +489,7 @@ def update_workout_history(previous_history: list, current_routine: dict, achiev
     csv_io = io.StringIO()
     csv_io.write('\ufeff')
     writer = csv.writer(csv_io)
-    writer.writerow(["회차", "날짜", "성취도 단계", "성취도 설명", "분할/요일", "부위", "운동 종목명", "세트", "횟수", "여유 횟수"])
+    writer.writerow(["회차", "날짜", "성취도 단계", "성취도 설명", "부위", "운동 종목명", "세트", "횟수", "여유 횟수"])
 
     for sess in history:
         s_num = f"{sess.get('session_num', 1)}회차"
@@ -505,13 +505,13 @@ def update_workout_history(previous_history: list, current_routine: dict, achiev
             row_s_desc = s_desc if ex_idx == 0 else ""
             clean_reps = re.sub(r'^(양쪽\s*번갈아\s*|좌우\s*각각\s*|각각\s*|양쪽\s*|한쪽당\s*)', '', str(ex.get("reps", ""))).strip()
             clean_rir = re.sub(r'RIR\s*', '여유 ', str(ex.get("rir_guide", "")), flags=re.IGNORECASE)
+            clean_rir = re.sub(r'\(.*?\)', '', clean_rir).strip()
 
             writer.writerow([
                 row_s_num,
                 row_s_date,
                 row_s_lvl,
                 row_s_desc,
-                ex.get("day", ""),
                 ex.get("body_part", ""),
                 ex.get("name", ""),
                 ex.get("sets", ""),
