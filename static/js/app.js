@@ -59,6 +59,28 @@ document.addEventListener("DOMContentLoaded", () => {
   // 현재 생성된 최신 루틴 데이터 캐시 (복사 및 다운로드용)
   let currentRoutineData = null;
 
+  // URL에 남아있는 쿼리스트링(?user_height=... 등)이 있다면 폼 값에 채워주고 주소창을 깔끔하게 정리
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has("user_height") && userHeightInput) {
+      userHeightInput.value = urlParams.get("user_height");
+    }
+    if (urlParams.has("user_weight") && userWeightInput) {
+      userWeightInput.value = urlParams.get("user_weight");
+    }
+    if (urlParams.has("user_strength") && userStrengthInput) {
+      userStrengthInput.value = urlParams.get("user_strength");
+    }
+    if (urlParams.has("notes") && document.getElementById("notes")) {
+      document.getElementById("notes").value = urlParams.get("notes");
+    }
+    if (window.location.search) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  } catch (err) {
+    console.warn("쿼리 파라미터 복원 스킵:", err);
+  }
+
   // 1. 통증 슬라이더 및 고위험 신호 실시간 감시 로직
   const painDescriptions = {
     1: "1단계 (경미한 뻐근함)",
@@ -600,9 +622,12 @@ document.addEventListener("DOMContentLoaded", () => {
     pinDigits[0].focus();
   }
 
-  // 8. 폼 제출 이벤트 핸들러: 먼저 PIN 모달을 띄움
-  plannerForm.addEventListener("submit", (e) => {
-    e.preventDefault();
+  // 8. 폼 제출 안전 핸들러 (Enter 키 새로고침 방지 및 PIN 모달 호출)
+  function handleFormSubmit(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
 
     if (submitBtn.disabled) {
       return;
@@ -647,6 +672,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 비밀번호 입력 모달창 오픈
     openPinModal();
+  }
+
+  // 폼 제출 이벤트 바인딩
+  plannerForm.addEventListener("submit", handleFormSubmit);
+  submitBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    handleFormSubmit(e);
+  });
+
+  // 입력칸들에서 Enter 키 입력 시 브라우저 강제 새로고침 방지
+  const allFormInputs = plannerForm.querySelectorAll("input[type='text'], input[type='number']");
+  allFormInputs.forEach((inp) => {
+    inp.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleFormSubmit(e);
+      }
+    });
   });
 
   // 9. 실제 API 비동기 호출
