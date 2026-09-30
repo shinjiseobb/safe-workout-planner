@@ -1719,6 +1719,69 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
   flex-shrink: 0;
 }
 
+/* 인터랙티브 액션 토스트 */
+.toast-item.toast-action {
+  background-color: rgba(15, 23, 42, 0.96);
+  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28), 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 14px 20px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  max-width: 92vw;
+}
+
+.toast-action-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.toast-action-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.toast-btn {
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 20px;
+  transition: all 0.18s ease;
+}
+
+.toast-btn-confirm {
+  background: var(--primary-color);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
+}
+
+.toast-btn-confirm:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.toast-btn-cancel {
+  background: rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+}
+
+.toast-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
 @keyframes toastSlideUp {
   from {
     opacity: 0;

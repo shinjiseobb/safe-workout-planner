@@ -102,6 +102,46 @@ document.addEventListener("DOMContentLoaded", () => {
     }, duration);
   }
 
+  // 액션 버튼이 포함된 인터랙티브 토스트 헬퍼
+  function showActionToast(message, confirmText, cancelText, onConfirm, onCancel) {
+    const toastItem = document.createElement("div");
+    toastItem.className = "toast-item toast-action";
+    toastItem.innerHTML = `
+      <div class="toast-action-content">
+        <span class="toast-icon">📋</span>
+        <span class="toast-msg">${escapeHtml(message)}</span>
+      </div>
+      <div class="toast-action-btns">
+        <button type="button" class="toast-btn toast-btn-cancel">${escapeHtml(cancelText)}</button>
+        <button type="button" class="toast-btn toast-btn-confirm">${escapeHtml(confirmText)}</button>
+      </div>
+    `;
+
+    function closeToast() {
+      toastItem.classList.add("toast-hiding");
+      setTimeout(() => {
+        if (toastItem.parentNode) {
+          toastItem.parentNode.removeChild(toastItem);
+        }
+      }, 250);
+    }
+
+    const confirmBtn = toastItem.querySelector(".toast-btn-confirm");
+    const cancelBtn = toastItem.querySelector(".toast-btn-cancel");
+
+    confirmBtn.addEventListener("click", () => {
+      closeToast();
+      if (typeof onConfirm === "function") onConfirm();
+    });
+
+    cancelBtn.addEventListener("click", () => {
+      closeToast();
+      if (typeof onCancel === "function") onCancel();
+    });
+
+    toastContainer.appendChild(toastItem);
+  }
+
   // URL에 남아있는 쿼리스트링(?user_height=... 등)이 있다면 폼 값에 채워주고 주소창을 깔끔하게 정리
   try {
     const urlParams = new URLSearchParams(window.location.search);
@@ -354,23 +394,30 @@ document.addEventListener("DOMContentLoaded", () => {
             firstTimeUserSection.classList.add("hidden");
           }
 
-          // 지난 회차 신체 상태 및 운동 환경 설정 복원 여부 확인창
+          // 지난 회차 신체 상태 및 운동 환경 설정 복원 인터랙티브 액션 토스트
           const lastProfile = parsed.last_user_profile;
           if (lastProfile) {
             setTimeout(() => {
-              const confirmRestore = confirm(
-                "지난 회차의 신체 상태 및 운동 환경 설정을 불러오시겠습니까?\n\n[확인]: 직전 설정(목적, 분할, 환경, 통증 부위 등) 자동 적용\n[취소]: 현재 화면의 입력 설정 유지"
+              showActionToast(
+                "지난 회차의 운동 설정(목적, 분할, 장비, 통증 부위 등)을 불러올까요?",
+                "불러오기",
+                "현재 설정 유지",
+                () => {
+                  // [불러오기] 클릭 시 실행
+                  restoreUserProfileForm(lastProfile);
+                  logFileStatus.innerHTML = `
+                    <span class="badge-log-state loaded">
+                      ✅ 이전 ${loadedHistory.length}회차 기록 및 지난 설정 복원 완료 (마지막 운동일: ${escapeHtml(lastDate)})
+                    </span>
+                  `;
+                  showToast("지난 회차의 운동 설정이 자동 적용되었습니다.", "info");
+                },
+                () => {
+                  // [현재 설정 유지] 클릭 시 안내
+                  showToast("현재 화면의 입력 설정을 유지합니다.", "info");
+                }
               );
-              if (confirmRestore) {
-                restoreUserProfileForm(lastProfile);
-                logFileStatus.innerHTML = `
-                  <span class="badge-log-state loaded">
-                    ✅ 이전 ${loadedHistory.length}회차 기록 및 지난 설정 복원 완료 (마지막 운동일: ${escapeHtml(lastDate)})
-                  </span>
-                `;
-                showToast("지난 회차의 운동 설정이 자동 적용되었습니다.", "info");
-              }
-            }, 60);
+            }, 300);
           }
         } catch (err) {
           console.error("JSON 파싱 에러:", err);
