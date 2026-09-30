@@ -718,6 +718,81 @@ select:focus, input[type="text"]:focus {
   justify-content: center;
 }
 
+/* 4자리 PIN 비밀번호 모달 스타일 */
+.pin-modal-card {
+  max-width: 380px;
+  width: 90%;
+  padding: 32px 24px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  background: #ffffff;
+  text-align: center;
+}
+
+.pin-modal-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: 24px;
+  letter-spacing: 0.5px;
+}
+
+.pin-inputs-container {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.pin-digit {
+  width: 52px;
+  height: 60px;
+  text-align: center;
+  font-size: 1.6rem;
+  font-weight: 800;
+  border: 2px solid var(--gray-300);
+  border-radius: 10px;
+  background-color: var(--gray-50);
+  color: var(--gray-900);
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.pin-digit:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  background-color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+  transform: translateY(-2px);
+}
+
+.pin-inputs-container.shake {
+  animation: pinShake 0.4s ease-in-out;
+}
+
+@keyframes pinShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
+}
+
+.pin-error-text {
+  color: var(--danger-border);
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin-bottom: 18px;
+}
+
+.pin-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.pin-modal-actions button {
+  flex: 1;
+}
+
 /* 유틸리티 */
 .hidden {
   display: none !important;

@@ -27,6 +27,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const hardStopMessage = document.getElementById("hardStopMessage");
   const closeModalBtn = document.getElementById("closeModalBtn");
 
+  // 4자리 PIN 모달 요소
+  const pinModal = document.getElementById("pinModal");
+  const pinDigits = document.querySelectorAll(".pin-digit");
+  const pinInputsContainer = document.getElementById("pinInputsContainer");
+  const pinErrorMessage = document.getElementById("pinErrorMessage");
+  const cancelPinBtn = document.getElementById("cancelPinBtn");
+  const confirmPinBtn = document.getElementById("confirmPinBtn");
+  let pendingPayload = null;
+
   // 도구 버튼
   const copyBtn = document.getElementById("copyBtn");
   const downloadMdBtn = document.getElementById("downloadMdBtn");
@@ -205,8 +214,90 @@ document.addEventListener("DOMContentLoaded", () => {
     resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  // 7. 폼 제출 이벤트 핸들러
-  plannerForm.addEventListener("submit", async (e) => {
+  // 7. 4자리 PIN 모달 제어 및 입력 로직
+  function openPinModal() {
+    pinDigits.forEach((d) => (d.value = ""));
+    pinErrorMessage.classList.add("hidden");
+    pinInputsContainer.classList.remove("shake");
+    pinModal.classList.remove("hidden");
+    setTimeout(() => pinDigits[0].focus(), 50);
+  }
+
+  function closePinModal() {
+    pinModal.classList.add("hidden");
+    pinDigits.forEach((d) => (d.value = ""));
+    pinErrorMessage.classList.add("hidden");
+  }
+
+  cancelPinBtn.addEventListener("click", closePinModal);
+  pinModal.addEventListener("click", (e) => {
+    if (e.target === pinModal) closePinModal();
+  });
+
+  // 4자리 입력 박스 자동 포커스 이동 처리
+  pinDigits.forEach((input, idx) => {
+    input.addEventListener("input", (e) => {
+      const val = e.target.value.replace(/[^0-9]/g, "");
+      e.target.value = val;
+      pinErrorMessage.classList.add("hidden");
+
+      if (val && idx < pinDigits.length - 1) {
+        pinDigits[idx + 1].focus();
+      }
+
+      const allFilled = Array.from(pinDigits).every((d) => d.value.length === 1);
+      if (allFilled && idx === pinDigits.length - 1) {
+        confirmPinBtn.focus();
+      }
+    });
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Backspace" && !input.value && idx > 0) {
+        pinDigits[idx - 1].focus();
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        handlePinConfirm();
+      }
+    });
+
+    // 붙여넣기 (Paste) 지원: 4자리 복사 붙여넣기 시 4칸에 자동 배분
+    input.addEventListener("paste", (e) => {
+      e.preventDefault();
+      const pasteData = (e.clipboardData || window.clipboardData).getData("text").replace(/[^0-9]/g, "").slice(0, 4);
+      if (pasteData) {
+        pasteData.split("").forEach((char, i) => {
+          if (pinDigits[i]) pinDigits[i].value = char;
+        });
+        const nextIdx = Math.min(pasteData.length, pinDigits.length - 1);
+        pinDigits[nextIdx].focus();
+      }
+    });
+  });
+
+  confirmPinBtn.addEventListener("click", handlePinConfirm);
+
+  function handlePinConfirm() {
+    const enteredPin = Array.from(pinDigits).map((d) => d.value.trim()).join("");
+    if (enteredPin.length < 4) {
+      showPinError("4자리 비밀번호를 모두 입력해 주세요.");
+      return;
+    }
+
+    executeRoutineGeneration(enteredPin);
+  }
+
+  function showPinError(msg) {
+    pinErrorMessage.textContent = msg;
+    pinErrorMessage.classList.remove("hidden");
+    pinInputsContainer.classList.remove("shake");
+    void pinInputsContainer.offsetWidth; // CSS 리플로우
+    pinInputsContainer.classList.add("shake");
+    pinDigits.forEach((d) => (d.value = ""));
+    pinDigits[0].focus();
+  }
+
+  // 8. 폼 제출 이벤트 핸들러: 먼저 PIN 모달을 띄움
+  plannerForm.addEventListener("submit", (e) => {
     e.preventDefault();
 
     const disclaimerCheckbox = document.getElementById("disclaimer_agree");
@@ -215,18 +306,11 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const accessPin = document.getElementById("access_pin").value.trim();
-    if (!accessPin) {
-      alert("이용 비밀번호 4자리를 입력해 주세요.");
-      document.getElementById("access_pin").focus();
-      return;
-    }
-
     // 선택된 통증 부위 수집
     const painCheckboxes = document.querySelectorAll("input[name='pain_area']:checked");
     const painAreas = Array.from(painCheckboxes).map((cb) => cb.value);
 
-    const payload = {
+    pendingPayload = {
       goal: document.getElementById("goal").value,
       experience: document.getElementById("experience").value,
       days_per_week: parseInt(document.getElementById("days_per_week").value, 10),
@@ -236,10 +320,19 @@ document.addEventListener("DOMContentLoaded", () => {
       pain_level: parseInt(painSlider.value, 10),
       has_radiating_pain: document.getElementById("has_radiating_pain").checked,
       has_surgery: document.getElementById("has_surgery").checked,
-      access_pin: accessPin,
       notes: document.getElementById("notes").value.trim()
     };
 
+    // 비밀번호 입력 모달창 오픈
+    openPinModal();
+  });
+
+  // 9. 실제 API 비동기 호출
+  async function executeRoutineGeneration(accessPin) {
+    if (!pendingPayload) return;
+
+    pendingPayload.access_pin = accessPin;
+    closePinModal();
     setLoadingState(true);
 
     try {
@@ -248,10 +341,17 @@ document.addEventListener("DOMContentLoaded", () => {
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(pendingPayload)
       });
 
       const resData = await response.json();
+
+      if (response.status === 403 || (resData.message && resData.message.includes("비밀번호"))) {
+        // 비밀번호 오류 시 모달 다시 열고 에러 표시
+        openPinModal();
+        showPinError("비밀번호가 일치하지 않습니다.");
+        return;
+      }
 
       if (!response.ok) {
         throw new Error(resData.message || "서버 통신 중 오류가 발생했습니다.");
@@ -270,7 +370,7 @@ document.addEventListener("DOMContentLoaded", () => {
     } finally {
       setLoadingState(false);
     }
-  });
+  }
 
   // 8. 텍스트 복사 기능
   copyBtn.addEventListener("click", () => {
