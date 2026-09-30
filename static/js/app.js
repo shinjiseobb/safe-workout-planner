@@ -61,9 +61,46 @@ document.addEventListener("DOMContentLoaded", () => {
   const achievementSlider = document.getElementById("achievementSlider");
   const achievementLevelText = document.getElementById("achievementLevelText");
   let loadedHistory = [];
-
   // 현재 생성된 최신 루틴 데이터 캐시 (복사 및 다운로드용)
   let currentRoutineData = null;
+
+  // =========================================================
+  // 스마트 토스트 알림 헬퍼 (Toast Notification)
+  // =========================================================
+  let toastContainer = document.querySelector(".toast-container");
+  if (!toastContainer) {
+    toastContainer = document.createElement("div");
+    toastContainer.className = "toast-container";
+    document.body.appendChild(toastContainer);
+  }
+
+  function showToast(message, type = "info", duration = 2800) {
+    const iconMap = {
+      success: "✅",
+      warning: "⚠️",
+      error: "❌",
+      info: "ℹ️"
+    };
+
+    const toastItem = document.createElement("div");
+    toastItem.className = `toast-item toast-${type}`;
+    toastItem.innerHTML = `
+      <span class="toast-icon">${iconMap[type] || "ℹ️"}</span>
+      <span class="toast-msg">${escapeHtml(message)}</span>
+    `;
+
+    toastContainer.appendChild(toastItem);
+
+    // duration 후 서서히 사라지면서 제거
+    setTimeout(() => {
+      toastItem.classList.add("toast-hiding");
+      setTimeout(() => {
+        if (toastItem.parentNode) {
+          toastItem.parentNode.removeChild(toastItem);
+        }
+      }, 250);
+    }, duration);
+  }
 
   // URL에 남아있는 쿼리스트링(?user_height=... 등)이 있다면 폼 값에 채워주고 주소창을 깔끔하게 정리
   try {
@@ -293,7 +330,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const historyArray = Array.isArray(parsed) ? parsed : (parsed.history || []);
 
           if (historyArray.length === 0) {
-            alert("일지 파일 내에 유효한 운동 기록이 없습니다.");
+            showToast("일지 파일 내에 유효한 운동 기록이 없습니다.", "warning");
             return;
           }
 
@@ -306,6 +343,7 @@ document.addEventListener("DOMContentLoaded", () => {
               ✅ 이전 ${loadedHistory.length}회차 기록 로드 완료 (마지막 운동일: ${escapeHtml(lastDate)})
             </span>
           `;
+          showToast(`이전 ${loadedHistory.length}회차 운동 기록을 불러왔습니다.`, "success");
 
           if (achievementSection) {
             achievementSection.classList.remove("hidden");
@@ -330,12 +368,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     ✅ 이전 ${loadedHistory.length}회차 기록 및 지난 설정 복원 완료 (마지막 운동일: ${escapeHtml(lastDate)})
                   </span>
                 `;
+                showToast("지난 회차의 운동 설정이 자동 적용되었습니다.", "info");
               }
             }, 60);
           }
         } catch (err) {
           console.error("JSON 파싱 에러:", err);
-          alert("올바른 운동 일지(.json) 파일이 아닙니다.");
+          showToast("올바른 운동 일지(.json) 파일이 아닙니다.", "error");
         }
       };
       reader.readAsText(file, "UTF-8");
@@ -691,7 +730,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const disclaimerCheckbox = document.getElementById("disclaimer_agree");
     if (!disclaimerCheckbox.checked) {
-      alert("안전한 운동 진행을 위해 면책 조항 및 즉시 중단 기준에 동의해 주세요.");
+      showToast("안전한 운동 진행을 위해 필수 면책 조항에 동의해 주세요.", "warning");
+      disclaimerCheckbox.focus();
       return;
     }
 
@@ -777,12 +817,13 @@ document.addEventListener("DOMContentLoaded", () => {
         showHardStopModal(resData.data);
       } else if (resData.status === "success") {
         renderRoutine(resData.data);
+        showToast("✨ 맞춤 운동 루틴이 성공적으로 생성되었습니다!", "success");
       } else {
-        alert(resData.message || "루틴을 생성할 수 없습니다.");
+        showToast(resData.message || "루틴을 생성할 수 없습니다.", "error");
       }
     } catch (err) {
       console.error("루틴 생성 요청 실패:", err);
-      alert(`오류 발생: ${err.message}`);
+      showToast(`오류 발생: ${err.message}`, "error");
     } finally {
       setLoadingState(false);
     }
@@ -833,6 +874,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const jsonContent = JSON.stringify(historyData, null, 2);
       const fileName = `${currentRoutineData._file_name_base || "운동_일지"}.json`;
       downloadFile(jsonContent, fileName, "application/json;charset=utf-8");
+      showToast(`📥 일지 파일(${fileName})이 저장되었습니다.`, "success");
     });
   }
 
@@ -861,11 +903,13 @@ document.addEventListener("DOMContentLoaded", () => {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+        showToast(`📊 엑셀 일지(${fileName})가 저장되었습니다.`, "success");
       } else {
         // 폴백: CSV 다운로드
         const csvContent = currentRoutineData._workout_csv || "\ufeff회차,날짜,성취도,분할,부위,운동 종목명,세트,횟수,여유 횟수\n";
         const fileName = `${baseName}.csv`;
         downloadFile(csvContent, fileName, "text/csv;charset=utf-8");
+        showToast(`📊 CSV 일지(${fileName})가 저장되었습니다.`, "success");
       }
     });
   }
@@ -875,8 +919,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!currentRoutineData) return;
     const textContent = formatRoutineToMarkdown(currentRoutineData);
     navigator.clipboard.writeText(textContent)
-      .then(() => alert("운동 루틴 내용이 클립보드에 복사되었습니다!"))
-      .catch(() => alert("클립보드 복사에 실패했습니다."));
+      .then(() => showToast("📋 운동 루틴이 클립보드에 복사되었습니다!", "success"))
+      .catch(() => showToast("클립보드 복사에 실패했습니다.", "error"));
   });
 
   // 헬퍼: HTML 특수문자 이스케이프 (XSS 방지)
@@ -1003,7 +1047,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // iOS의 경우 하단 공유 버튼 안내 툴팁 표시
       iosInstallTooltip.classList.toggle("hidden");
     } else {
-      alert("브라우저 오른쪽 상단 메뉴(⋮)에서 '홈 화면에 추가' 또는 '앱 설치'를 클릭해 주세요.");
+      showToast("브라우저 메뉴(⋮)에서 '홈 화면에 추가' 또는 '앱 설치'를 클릭해 주세요.", "info", 4000);
     }
   });
 
