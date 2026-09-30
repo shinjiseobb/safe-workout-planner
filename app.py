@@ -676,6 +676,7 @@ def generate_routine():
         routine_json["_workout_csv"] = csv_content
         routine_json["_file_name_base"] = file_name_base
         routine_json["_current_session_num"] = current_session_num
+        routine_json["_last_user_profile"] = user_profile
 
         return jsonify({
             "status": "success",

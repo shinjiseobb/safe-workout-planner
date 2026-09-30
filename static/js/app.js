@@ -148,6 +148,61 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // 헬퍼: 지난 회차의 신체 상태 및 환경 설정을 폼에 자동 복원
+  function restoreUserProfileForm(profile) {
+    if (!profile) return;
+
+    if (profile.goal && document.getElementById("goal")) {
+      document.getElementById("goal").value = profile.goal;
+    }
+    if (profile.experience && document.getElementById("experience")) {
+      document.getElementById("experience").value = profile.experience;
+    }
+    if (profile.split_routine && document.getElementById("split_routine")) {
+      document.getElementById("split_routine").value = profile.split_routine;
+    }
+    if (profile.session_duration && document.getElementById("session_duration")) {
+      document.getElementById("session_duration").value = String(profile.session_duration);
+    }
+    if (profile.environment && document.getElementById("environment")) {
+      document.getElementById("environment").value = profile.environment;
+    }
+    if (profile.cardio_option && document.getElementById("cardio_option")) {
+      document.getElementById("cardio_option").value = profile.cardio_option;
+    }
+
+    const savedPainAreas = Array.isArray(profile.pain_areas) ? profile.pain_areas : [];
+    document.querySelectorAll("input[name='pain_area']").forEach((cb) => {
+      cb.checked = savedPainAreas.includes(cb.value);
+    });
+
+    if (profile.pain_level !== undefined && painSlider) {
+      const pLevel = parseInt(profile.pain_level, 10) || 1;
+      painSlider.value = pLevel;
+      painLevelText.textContent = painDescriptions[pLevel] || `${pLevel}점`;
+      if (pLevel >= 4) {
+        painLevelText.style.color = "#dc2626";
+        painLevelText.style.backgroundColor = "#fee2e2";
+      } else {
+        painLevelText.style.color = "#2563eb";
+        painLevelText.style.backgroundColor = "#eff6ff";
+      }
+    }
+
+    if (hasRadiatingPain && profile.has_radiating_pain !== undefined) {
+      hasRadiatingPain.checked = Boolean(profile.has_radiating_pain);
+    }
+    if (hasSurgery && profile.has_surgery !== undefined) {
+      hasSurgery.checked = Boolean(profile.has_surgery);
+    }
+
+    if (document.getElementById("notes") && profile.notes !== undefined) {
+      document.getElementById("notes").value = profile.notes;
+    }
+
+    updateRiskState();
+  }
+
   if (workoutLogFileInput) {
     workoutLogFileInput.addEventListener("change", (e) => {
       const file = e.target.files[0];
@@ -176,6 +231,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
           if (achievementSection) {
             achievementSection.classList.remove("hidden");
+          }
+
+          // 지난 회차 신체 상태 및 운동 환경 설정 복원 여부 확인창
+          const lastProfile = parsed.last_user_profile;
+          if (lastProfile) {
+            setTimeout(() => {
+              const confirmRestore = confirm(
+                "지난 회차의 신체 상태 및 운동 환경 설정을 불러오시겠습니까?\n\n[확인]: 직전 설정(목적, 분할, 환경, 통증 부위 등) 자동 적용\n[취소]: 현재 화면의 입력 설정 유지"
+              );
+              if (confirmRestore) {
+                restoreUserProfileForm(lastProfile);
+                logFileStatus.innerHTML = `
+                  <span class="badge-log-state loaded">
+                    ✅ 이전 ${loadedHistory.length}회차 기록 및 지난 설정 복원 완료 (마지막 운동일: ${escapeHtml(lastDate)})
+                  </span>
+                `;
+              }
+            }, 60);
           }
         } catch (err) {
           console.error("JSON 파싱 에러:", err);
@@ -539,10 +612,26 @@ document.addEventListener("DOMContentLoaded", () => {
   if (downloadJsonBtn) {
     downloadJsonBtn.addEventListener("click", () => {
       if (!currentRoutineData) return;
+
+      const currentProfile = currentRoutineData._last_user_profile || {
+        goal: document.getElementById("goal") ? document.getElementById("goal").value : "근력 증진",
+        experience: document.getElementById("experience") ? document.getElementById("experience").value : "초급",
+        split_routine: document.getElementById("split_routine") ? document.getElementById("split_routine").value : "2분할",
+        session_duration: document.getElementById("session_duration") ? parseInt(document.getElementById("session_duration").value, 10) : 50,
+        environment: document.getElementById("environment") ? document.getElementById("environment").value : "헬스장",
+        cardio_option: document.getElementById("cardio_option") ? document.getElementById("cardio_option").value : "none",
+        pain_areas: Array.from(document.querySelectorAll("input[name='pain_area']:checked")).map(cb => cb.value),
+        pain_level: painSlider ? parseInt(painSlider.value, 10) : 1,
+        has_radiating_pain: hasRadiatingPain ? hasRadiatingPain.checked : false,
+        has_surgery: hasSurgery ? hasSurgery.checked : false,
+        notes: document.getElementById("notes") ? document.getElementById("notes").value.trim() : ""
+      };
+
       const historyData = {
-        version: "1.0",
+        version: "1.1",
         export_date: new Date().toISOString(),
-        history: currentRoutineData._workout_history || []
+        history: currentRoutineData._workout_history || [],
+        last_user_profile: currentProfile
       };
       const jsonContent = JSON.stringify(historyData, null, 2);
       const fileName = `${currentRoutineData._file_name_base || "운동_일지"}.json`;
