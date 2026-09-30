@@ -443,6 +443,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let splitDaysHtml = `<div class="split-container">`;
     workoutDays.forEach((day) => {
       let dayExercisesHtml = `<div class="exercise-list">`;
+      (day.exercises || []).forEach((ex) => {
         let replacementTagHtml = "";
         const repType = ex.replacement_type || (ex.is_replacement ? "joint_safe" : "none");
         const replacedFrom = ex.replaced_from ? ` <span class="replaced-from-text">(기존: ${escapeHtml(ex.replaced_from)})</span>` : "";
