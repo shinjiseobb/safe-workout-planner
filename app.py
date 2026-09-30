@@ -314,14 +314,24 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
     raise RuntimeError(f"모든 Gemini 모델 호출 실패: {last_err}")
 
 
+ACHIEVEMENT_LABEL_MAP = {
+    1: "1단계 (80%)",
+    2: "2단계 (90%)",
+    3: "3단계 (100%)",
+    4: "4단계 (110%)",
+    5: "5단계 (120%)"
+}
+
+
 def create_workout_excel_bytes(history: list) -> bytes:
     """
     사용자의 누적 운동 일지를 전문 엑셀(.xlsx) 파일 바이너리로 생성
-    1) 관절 안전 자세 팁 열 제거
+    1) 관절 안전 자세 팁 및 분할/요일 열 제거 (8개 열 최적화)
     2) 동일 회차의 연속 운동들에 대해 회차(A), 날짜(B), 성취도(C) 세로 병합
     3) 날짜 열 너비를 16으로 확보하여 ######## 현상 원천 방지
     4) 운동 종목명 열 너비를 35(3칸 크기)로 확보하여 긴 명칭 잘림 방지
-    5) 횟수 앞의 '양쪽 번갈아', '각각', '좌우 각각' 등 불필요한 수식어 자동 제거
+    5) 횟수 앞 수식어 및 여유 횟수 괄호 설명 자동 제거
+    6) 성취도: 완료 회차는 'N단계 (N%)', 신규 플랜은 '(수행 예정)' 표기
     """
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -363,7 +373,11 @@ def create_workout_excel_bytes(history: list) -> bytes:
     for sess in history:
         s_num = f"{sess.get('session_num', 1)}회차"
         s_date = sess.get("date", "")
-        s_lvl = f"{sess.get('achievement_level', 3)}단계"
+        lvl = sess.get("achievement_level")
+        if lvl is not None and int(lvl) in ACHIEVEMENT_LABEL_MAP:
+            s_lvl = ACHIEVEMENT_LABEL_MAP[int(lvl)]
+        else:
+            s_lvl = sess.get("achievement_label", "(수행 예정)")
         exercises = sess.get("exercises", [])
 
         if not exercises:
@@ -451,16 +465,22 @@ def update_workout_history(previous_history: list, current_routine: dict, achiev
     date_str = now_kst.strftime("%Y-%m-%d")
     file_date_str = now_kst.strftime("%Y_%m_%d")
 
-    level = int(achievement_level) if achievement_level else 3
-    desc = achievement_map.get(level, f"{level}단계")
+    # 1. 이전 회차가 있고 사용자가 성취도를 평가한 경우 -> 직전 세션(history[-1])에 소급 확정 기록
+    if history and achievement_level is not None:
+        eval_level = int(achievement_level)
+        history[-1]["achievement_level"] = eval_level
+        history[-1]["achievement_label"] = ACHIEVEMENT_LABEL_MAP.get(eval_level, f"{eval_level}단계")
+        history[-1]["achievement_desc"] = achievement_map.get(eval_level, f"{eval_level}단계")
 
     new_session_num = (history[-1].get("session_num", len(history)) + 1) if history else 1
 
+    # 2. 이번에 새로 생성된 세션은 아직 운동 전이므로 '(수행 예정)' 상태로 등록
     new_session = {
         "session_num": new_session_num,
         "date": date_str,
-        "achievement_level": level,
-        "achievement_desc": desc,
+        "achievement_level": None,
+        "achievement_label": "(수행 예정)",
+        "achievement_desc": "(수행 예정)",
         "routine_title": current_routine.get("routine_title", "관절 안전 맞춤 운동 루틴"),
         "exercises": []
     }
@@ -489,13 +509,17 @@ def update_workout_history(previous_history: list, current_routine: dict, achiev
     csv_io = io.StringIO()
     csv_io.write('\ufeff')
     writer = csv.writer(csv_io)
-    writer.writerow(["회차", "날짜", "성취도 단계", "성취도 설명", "부위", "운동 종목명", "세트", "횟수", "여유 횟수"])
+    writer.writerow(["회차", "날짜", "성취도", "성취도 상세", "부위", "운동 종목명", "세트", "횟수", "여유 횟수"])
 
     for sess in history:
         s_num = f"{sess.get('session_num', 1)}회차"
         s_date = sess.get("date", "")
-        s_lvl = f"{sess.get('achievement_level', 3)}단계"
-        s_desc = sess.get("achievement_desc", "")
+        lvl = sess.get("achievement_level")
+        if lvl is not None and int(lvl) in ACHIEVEMENT_LABEL_MAP:
+            s_lvl = ACHIEVEMENT_LABEL_MAP[int(lvl)]
+        else:
+            s_lvl = sess.get("achievement_label", "(수행 예정)")
+        s_desc = sess.get("achievement_desc", "(수행 예정)")
         exercises = sess.get("exercises", [])
         for ex_idx, ex in enumerate(exercises):
             # 연속 행 회차/날짜 깔끔 표기 (첫 번째 행만 표기, 이후 빈칸)
