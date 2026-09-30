@@ -122,20 +122,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (achievementSlider) {
     achievementSlider.addEventListener("input", (e) => {
-      const val = e.target.value;
+      const val = parseInt(e.target.value, 10);
       achievementLevelText.textContent = achievementMap[val] || `${val}단계`;
-      if (val == 1) {
+      if (val === 1) {
+        // 1단계: 연빨강 (피로/미달)
         achievementLevelText.style.backgroundColor = "#fee2e2";
         achievementLevelText.style.color = "#dc2626";
-      } else if (val == 2) {
+      } else if (val === 2) {
+        // 2단계: 연주황 (아쉬운 완수)
         achievementLevelText.style.backgroundColor = "#fef3c7";
         achievementLevelText.style.color = "#d97706";
-      } else if (val >= 4) {
-        achievementLevelText.style.backgroundColor = "#dcfce7";
-        achievementLevelText.style.color = "#15803d";
-      } else {
+      } else if (val === 3) {
+        // 3단계: 연파랑 (100% 정상 완수)
         achievementLevelText.style.backgroundColor = "#eff6ff";
         achievementLevelText.style.color = "#2563eb";
+      } else if (val === 4) {
+        // 4단계: 에메랄드 초록 (여유 완료)
+        achievementLevelText.style.backgroundColor = "#dcfce7";
+        achievementLevelText.style.color = "#15803d";
+      } else if (val === 5) {
+        // 5단계: 바이올렛 보라 (충분한 초과 / 증량)
+        achievementLevelText.style.backgroundColor = "#f3e8ff";
+        achievementLevelText.style.color = "#7e22ce";
       }
     });
   }
