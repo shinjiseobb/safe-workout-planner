@@ -1011,6 +1011,172 @@ select:focus, input[type="text"]:focus {
   margin-bottom: 0;
 }
 
+/* 운동 일지 업로드 및 성취도 선택 스타일 */
+.log-upload-card {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1.5px dashed #cbd5e1;
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  margin-bottom: 24px;
+  transition: all 0.2s ease;
+}
+
+.log-upload-card:hover {
+  border-color: var(--primary-color);
+  background: #f8fafc;
+}
+
+.log-upload-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.log-upload-title-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+}
+
+.log-upload-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.log-upload-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: 3px;
+}
+
+.log-upload-desc {
+  font-size: 0.85rem;
+  color: var(--gray-600);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.btn-file-upload {
+  cursor: pointer;
+  white-space: nowrap;
+  font-weight: 600;
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background: #ffffff;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.btn-file-upload:hover {
+  background-color: var(--primary-color);
+  color: #ffffff;
+}
+
+.log-file-status {
+  margin-top: 12px;
+}
+
+.badge-log-state {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  background-color: #e2e8f0;
+  color: var(--gray-700);
+  transition: all 0.2s ease;
+}
+
+.badge-log-state.loaded {
+  background-color: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.achievement-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+  animation: fadeInAlert 0.25s ease-in-out;
+}
+
+.achievement-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.achievement-label {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--gray-800);
+  margin: 0;
+}
+
+.achievement-level-badge {
+  display: inline-block;
+  background-color: var(--primary-light);
+  color: var(--primary-color);
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.achievement-slider {
+  width: 100%;
+  height: 8px;
+  border-radius: 5px;
+  background: #cbd5e1;
+  outline: none;
+  accent-color: var(--primary-color);
+  cursor: pointer;
+}
+
+.achievement-range-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: var(--gray-600);
+  margin-top: 8px;
+}
+
+.achievement-range-labels span {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.body-part-badge {
+  display: inline-block;
+  background-color: #f1f5f9;
+  color: #1e293b;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.btn-download-action {
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 8px 14px;
+}
+
 /* 유틸리티 */
 .hidden {
   display: none !important;

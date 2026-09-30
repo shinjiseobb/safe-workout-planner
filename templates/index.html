@@ -70,6 +70,48 @@
       <section class="form-card">
         <h2 class="section-title">신체 상태 및 운동 환경 설정</h2>
         <form id="plannerForm">
+          <!-- 0. 운동 일지 불러오기 & 성취도 평가 섹션 -->
+          <div class="log-upload-card">
+            <div class="log-upload-header">
+              <div class="log-upload-title-wrap">
+                <span class="log-upload-icon">📂</span>
+                <div>
+                  <h3 class="log-upload-title">이전 운동 일지 불러오기 (선택)</h3>
+                  <p class="log-upload-desc">이전에 다운로드한 <strong>운동_일지_*.json</strong> 파일을 첨부하면 성취도를 반영해 루틴을 자동 수정합니다.</p>
+                </div>
+              </div>
+              <div class="log-file-input-wrapper">
+                <label for="workoutLogFileInput" class="btn btn-outline btn-file-upload">
+                  <span>📁 일지 파일 첨부 (.json)</span>
+                </label>
+                <input type="file" id="workoutLogFileInput" accept=".json,application/json" class="hidden">
+              </div>
+            </div>
+
+            <!-- 파일 첨부 상태 배지 -->
+            <div id="logFileStatus" class="log-file-status">
+              <span class="badge-log-state">🌱 새로운 첫 운동 시작 (이전 기록 없음)</span>
+            </div>
+
+            <!-- 파일 첨부 시 나타나는 최근 성취도 선택 영역 -->
+            <div id="achievementSection" class="achievement-section hidden">
+              <div class="form-group" style="margin-bottom: 0;">
+                <div class="achievement-header-row">
+                  <label class="achievement-label">⭐ 가장 최근 운동의 성취도를 선택해 주세요</label>
+                  <span id="achievementLevelText" class="achievement-level-badge">3단계 (80%~100% 정상 완수)</span>
+                </div>
+                <input type="range" id="achievementSlider" min="1" max="5" value="3" step="1" class="custom-range achievement-slider">
+                <div class="range-labels achievement-range-labels">
+                  <span>1단계 (50% 미만)</span>
+                  <span>2단계 (50~80%)</span>
+                  <span>3단계 (정상 완수)</span>
+                  <span>4단계 (100~120%)</span>
+                  <span>5단계 (150% 이상)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- 기본 운동 정보 -->
           <div class="form-group-row">
             <div class="form-group">
@@ -208,8 +250,9 @@
             <p id="summaryMessage" class="result-summary">루틴 요약 설명이 표시됩니다.</p>
           </div>
           <div class="action-buttons">
+            <button type="button" id="downloadJsonBtn" class="btn btn-outline btn-download-action">📁 앱 연동 일지 (.json)</button>
+            <button type="button" id="downloadCsvBtn" class="btn btn-outline btn-download-action">📊 엑셀 일지 (.csv)</button>
             <button type="button" id="copyBtn" class="btn btn-outline">📋 텍스트 복사</button>
-            <button type="button" id="downloadMdBtn" class="btn btn-outline">💾 Markdown 저장</button>
           </div>
         </div>
 

@@ -1,11 +1,17 @@
 import os
 import json
 import logging
+import csv
+import io
+from datetime import datetime, timezone, timedelta
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
 import requests
 from google import genai
 from google.genai import types
+
+# 한국 표준시(KST) 타임존 설정
+KST = timezone(timedelta(hours=9))
 
 # 1. 환경 변수 로드
 load_dotenv()
@@ -112,9 +118,38 @@ def search_safe_exercises(pain_areas: list, exercise_environment: str) -> str:
 def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dict:
     """
     Gemini Flash Lite 모델을 호출하여 관절 부담을 줄인 구조화된 JSON 루틴 생성
+    (이전 운동 일지 및 직전 성취도 피드백을 반영한 적응형 루틴 자동 조정 포함)
     """
     if not gemini_client:
         raise ValueError("Gemini API Client가 올바르게 설정되지 않았습니다.")
+
+    history = user_profile.get("history") or []
+    achievement_level = user_profile.get("achievement_level")
+
+    achievement_text_map = {
+        1: "1단계 (50% 미만 성취 - 극심한 피로 / 부상 위험 / 수행 실패)",
+        2: "2단계 (50%~80% 성취 - 다소 버거움 / 목표 미달)",
+        3: "3단계 (80%~100% 성취 - 계획대로 정상 완수)",
+        4: "4단계 (100%~120% 성취 - 여유 있게 완료 / 체력 충분)",
+        5: "5단계 (150% 이상 성취 - 너무 쉬움 / 목표 대폭 초과 달성)"
+    }
+
+    history_feedback_section = ""
+    if history and achievement_level:
+        last_session = history[-1]
+        history_feedback_section = f"""
+[사용자의 이전 누적 운동 이력 및 직전 성취도 피드백]
+- 현재 누적 운동 기록: 총 {len(history)}회차 보유
+- 직전 세션 평가 성취도: {achievement_text_map.get(int(achievement_level), f'{achievement_level}단계')}
+- 직전 세션 루틴: {last_session.get('routine_title', '이전 운동')} (수행일: {last_session.get('date', '최근')})
+
+[성취도 기반 적응형(Adaptive) 자동 수정 지침]
+- 1단계 (50% 미만): 사용자가 이전 루틴 수행에 실패했거나 통증/피로가 과중했습니다. 세트 수를 30~40% 줄이고, 강도를 대폭 낮추며, 관절에 부담이 없는 회복성 대체 운동으로 다운그레이드하세요.
+- 2단계 (50%~80%): 다소 버거웠으므로 현재 볼륨을 유지하거나 1세트 줄이고, 여유 횟수(RIR)를 1단계 높여 안전 마진을 확보하세요.
+- 3단계 (80%~100%): 계획을 완벽하게 소화했으므로 균형 잡힌 표준 점진적 과부하를 적용하세요.
+- 4단계 (100%~120%): 여유가 있었으므로 반복 횟수(Reps)를 1~2회 늘리거나 1세트 추가를 권장하세요.
+- 5단계 (150% 이상): 너무 쉬웠으므로 세트/볼륨을 증량하거나 한 단계 난이도가 높은 변형 종목으로 업그레이드하세요.
+"""
 
     prompt = f"""
 당신은 부상 예방 및 재활 운동역학 전문 시니어 스트렝스 코치입니다.
@@ -129,15 +164,16 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
 - 통증 및 불편 부위: {', '.join(user_profile.get('pain_areas', [])) if user_profile.get('pain_areas') else '없음'}
 - 통증 강도: {user_profile.get('pain_level')}/5점
 - 기타 주의사항: {user_profile.get('notes', '없음')}
-
+{history_feedback_section}
 [실시간 웹 검색 레퍼런스 (Serper.dev 수집 데이터)]
 {search_context}
 
 [작성 및 설계 지침]
 1. 통증 부위에 전단력(Shear force)이나 압박 부하가 큰 고위험 종목은 완전히 배제하세요.
 2. 각 종목마다 RIR(Reps in Reserve, 남은 여유 횟수) 가이드를 명시하여 무리한 한계 도달(실패 지점)을 엄격히 방지하세요.
-3. 1:1 관절 보호 대체 매핑 섹션에서는 흔히 다치는 '표준 운동'을 어떤 '대체 운동'으로 바꿨는지와 그 이유(관절 보호 원리)를 설명하세요.
-4. 부상 방지 케어 가이드에는 타깃 웜업, 실패 지점 도달 전 자세 붕괴 감지 팁, 쿨다운을 반드시 포함하세요.
+3. 각 운동 종목에는 주요 대상 '부위(body_part)'를 가슴, 등, 어깨, 하체, 팔, 복근/코어, 전신 중 하나로 명확히 표기하세요.
+4. 1:1 관절 보호 대체 매핑 섹션에서는 흔히 다치는 '표준 운동'을 어떤 '대체 운동'으로 바꿨는지와 그 이유(관절 보호 원리)를 설명하세요.
+5. 부상 방지 케어 가이드에는 타깃 웜업, 실패 지점 도달 전 자세 붕괴 감지 팁, 쿨다운을 반드시 포함하세요.
 
 [반드시 준수할 출력 형식]
 아래 JSON 스키마를 만족하는 순수 JSON 형식으로만 응답하세요. 백틱(```json) 마크다운 문법을 제외하고 오직 유효한 JSON 문자열만 출력해야 합니다.
@@ -151,6 +187,7 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
       "target_focus": "주요 타깃 근육 및 관절 보호 콘셉트",
       "exercises": [
         {{
+          "body_part": "부위 (가슴 / 등 / 어깨 / 하체 / 팔 / 복근 중 택1)",
           "name": "운동 종목명",
           "sets": "3세트",
           "reps": "12-15회",
@@ -218,6 +255,86 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
     raise RuntimeError(f"모든 Gemini 모델 호출 실패: {last_err}")
 
 
+def update_workout_history(previous_history: list, current_routine: dict, achievement_level: int = None):
+    """
+    10회 FIFO 누적 운동 일지 생성 및 엑셀용 CSV 변환
+    - 10회 미만: 기존 기록 뒤에 신규 기록 추가
+    - 10회 초과: 가장 오래된 첫 번째 기록을 지우고 최신 10회치 유지
+    """
+    achievement_map = {
+        1: "1단계 (50% 미만 성취 - 피로/실패)",
+        2: "2단계 (50%~80% 성취 - 다소 버거움)",
+        3: "3단계 (80%~100% 정상 완수 - 계획 달성)",
+        4: "4단계 (100%~120% 초과 성취 - 여유 완료)",
+        5: "5단계 (150% 이상 성취 - 대폭 초과)"
+    }
+
+    history = list(previous_history) if previous_history else []
+    now_kst = datetime.now(KST)
+    date_str = now_kst.strftime("%Y-%m-%d")
+    file_date_str = now_kst.strftime("%Y_%m_%d")
+
+    level = int(achievement_level) if achievement_level else 3
+    desc = achievement_map.get(level, f"{level}단계")
+
+    new_session_num = (history[-1].get("session_num", len(history)) + 1) if history else 1
+
+    new_session = {
+        "session_num": new_session_num,
+        "date": date_str,
+        "achievement_level": level,
+        "achievement_desc": desc,
+        "routine_title": current_routine.get("routine_title", "관절 안전 맞춤 운동 루틴"),
+        "exercises": []
+    }
+
+    for day in current_routine.get("weekly_split", []):
+        day_name = day.get("day_name", "")
+        for ex in day.get("exercises", []):
+            new_session["exercises"].append({
+                "day": day_name,
+                "body_part": ex.get("body_part", "전신"),
+                "name": ex.get("name", ""),
+                "sets": ex.get("sets", ""),
+                "reps": ex.get("reps", ""),
+                "rir_guide": ex.get("rir_guide", ""),
+                "form_tips": ex.get("form_tips", "")
+            })
+
+    # FIFO: 최대 10회분 유지 (10회 초과 시 가장 오래된 1번째 기록 제거)
+    history.append(new_session)
+    while len(history) > 10:
+        history.pop(0)
+
+    # 엑셀 열람용 CSV 생성 (한글 깨짐 방지 UTF-8 BOM 포함)
+    csv_io = io.StringIO()
+    csv_io.write('\ufeff')
+    writer = csv.writer(csv_io)
+    writer.writerow(["회차", "날짜", "성취도 단계", "성취도 설명", "분할/요일", "부위", "운동 종목명", "세트", "횟수", "RIR 여유", "관절 안전 자세 팁"])
+
+    for sess in history:
+        s_num = f"{sess.get('session_num', 1)}회차"
+        s_date = sess.get("date", "")
+        s_lvl = f"{sess.get('achievement_level', 3)}단계"
+        s_desc = sess.get("achievement_desc", "")
+        for ex in sess.get("exercises", []):
+            writer.writerow([
+                s_num,
+                s_date,
+                s_lvl,
+                s_desc,
+                ex.get("day", ""),
+                ex.get("body_part", ""),
+                ex.get("name", ""),
+                ex.get("sets", ""),
+                ex.get("reps", ""),
+                ex.get("rir_guide", ""),
+                ex.get("form_tips", "")
+            ])
+
+    return history, csv_io.getvalue(), file_date_str
+
+
 @app.route("/")
 def index():
     """메인 페이지 화면 렌더링"""
@@ -243,11 +360,12 @@ def favicon():
 def generate_routine():
     """
     운동 루틴 생성 API 엔드포인트
-    1. 클라이언트 입력 데이터 수신 및 파싱
+    1. 클라이언트 입력 데이터 수신 및 파싱 (이전 일지 및 성취도 포함)
     2. 위험 케이스 차단 (Hard Stop) 확인
     3. Serper.dev 실시간 웹 검색
-    4. Gemini Flash Lite 구조화 루틴 생성
-    5. JSON 결과 반환
+    4. Gemini Flash Lite 구조화 루틴 생성 (성취도 피드백 반영)
+    5. FIFO 10회 누적 일지 및 엑셀 CSV 생성
+    6. JSON 결과 반환
     """
     try:
         data = request.get_json()
@@ -264,8 +382,10 @@ def generate_routine():
         has_radiating_pain = bool(data.get("has_radiating_pain", False))
         has_surgery = bool(data.get("has_surgery", False))
         notes = data.get("notes", "")
+        history = data.get("history", [])
+        achievement_level = data.get("achievement_level")
 
-        logger.info(f"[요청 수신] 목적: {goal}, 환경: {environment}, 통증강도: {pain_level}, 부위: {pain_areas}")
+        logger.info(f"[요청 수신] 목적: {goal}, 통증강도: {pain_level}, 이전기록: {len(history)}회차, 최근성취도: {achievement_level}")
 
         # 0. 이용 비밀번호(PIN) 검증
         access_pin = str(data.get("access_pin", "")).strip()
@@ -288,7 +408,7 @@ def generate_routine():
         # 2. Serper.dev 검색 수행
         search_context = search_safe_exercises(pain_areas, environment)
 
-        # 3. Gemini Flash Lite 루틴 생성
+        # 3. Gemini Flash Lite 루틴 생성 (이전 일지 및 성취도 전달)
         user_profile = {
             "goal": goal,
             "experience": experience,
@@ -297,9 +417,20 @@ def generate_routine():
             "environment": environment,
             "pain_areas": pain_areas,
             "pain_level": pain_level,
-            "notes": notes
+            "notes": notes,
+            "history": history,
+            "achievement_level": achievement_level
         }
         routine_json = generate_routine_with_gemini(user_profile, search_context)
+
+        # 4. 10회치 FIFO 일지 업데이트 및 CSV 생성
+        updated_history, csv_content, file_date_str = update_workout_history(
+            history, routine_json, achievement_level
+        )
+
+        routine_json["_workout_history"] = updated_history
+        routine_json["_workout_csv"] = csv_content
+        routine_json["_file_name_base"] = f"운동_일지_{file_date_str}"
 
         return jsonify({
             "status": "success",

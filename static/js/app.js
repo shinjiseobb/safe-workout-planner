@@ -41,7 +41,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 도구 버튼
   const copyBtn = document.getElementById("copyBtn");
-  const downloadMdBtn = document.getElementById("downloadMdBtn");
+  const downloadJsonBtn = document.getElementById("downloadJsonBtn");
+  const downloadCsvBtn = document.getElementById("downloadCsvBtn");
+
+  // 운동 일지 불러오기 및 성취도 선택 요소
+  const workoutLogFileInput = document.getElementById("workoutLogFileInput");
+  const logFileStatus = document.getElementById("logFileStatus");
+  const achievementSection = document.getElementById("achievementSection");
+  const achievementSlider = document.getElementById("achievementSlider");
+  const achievementLevelText = document.getElementById("achievementLevelText");
+  let loadedHistory = [];
 
   // 탭 버튼들
   const tabBtns = document.querySelectorAll(".tab-btn");
@@ -101,6 +110,73 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 초기 상태 반영 (새로고침 시 브라우저 폼 복원 대응)
   updateRiskState();
+
+  // 1-1. 운동 일지 파일 첨부 및 성취도 평가 처리
+  const achievementMap = {
+    1: "1단계 (50% 미만 성취 - 극심한 피로 / 실패)",
+    2: "2단계 (50% ~ 80% 성취 - 다소 버거움)",
+    3: "3단계 (80% ~ 100% 정상 완수 - 계획 달성)",
+    4: "4단계 (100% ~ 120% 초과 성취 - 여유 완료)",
+    5: "5단계 (150% 이상 성취 - 목표 대폭 초과 달성)"
+  };
+
+  if (achievementSlider) {
+    achievementSlider.addEventListener("input", (e) => {
+      const val = e.target.value;
+      achievementLevelText.textContent = achievementMap[val] || `${val}단계`;
+      if (val == 1) {
+        achievementLevelText.style.backgroundColor = "#fee2e2";
+        achievementLevelText.style.color = "#dc2626";
+      } else if (val == 2) {
+        achievementLevelText.style.backgroundColor = "#fef3c7";
+        achievementLevelText.style.color = "#d97706";
+      } else if (val >= 4) {
+        achievementLevelText.style.backgroundColor = "#dcfce7";
+        achievementLevelText.style.color = "#15803d";
+      } else {
+        achievementLevelText.style.backgroundColor = "#eff6ff";
+        achievementLevelText.style.color = "#2563eb";
+      }
+    });
+  }
+
+  if (workoutLogFileInput) {
+    workoutLogFileInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const parsed = JSON.parse(event.target.result);
+          const historyArray = Array.isArray(parsed) ? parsed : (parsed.history || []);
+
+          if (historyArray.length === 0) {
+            alert("일지 파일 내에 유효한 운동 기록이 없습니다.");
+            return;
+          }
+
+          loadedHistory = historyArray;
+          const lastSession = loadedHistory[loadedHistory.length - 1];
+          const lastDate = lastSession.date || "최근";
+
+          logFileStatus.innerHTML = `
+            <span class="badge-log-state loaded">
+              ✅ 이전 ${loadedHistory.length}회차 기록 로드 완료 (마지막 운동일: ${escapeHtml(lastDate)})
+            </span>
+          `;
+
+          if (achievementSection) {
+            achievementSection.classList.remove("hidden");
+          }
+        } catch (err) {
+          console.error("JSON 파싱 에러:", err);
+          alert("올바른 운동 일지(.json) 파일이 아닙니다.");
+        }
+      };
+      reader.readAsText(file, "UTF-8");
+    });
+  }
 
   // 2. 탭 전환 처리
   tabBtns.forEach((btn) => {
@@ -172,7 +248,10 @@ document.addEventListener("DOMContentLoaded", () => {
         exercisesHtml += `
           <div class="exercise-item-card">
             <div class="ex-card-top">
-              <span class="ex-title">${escapeHtml(ex.name)}</span>
+              <div class="ex-title-wrap">
+                ${ex.body_part ? `<span class="body-part-badge">${escapeHtml(ex.body_part)}</span>` : ""}
+                <span class="ex-title">${escapeHtml(ex.name)}</span>
+              </div>
               <span class="rir-badge">${escapeHtml(ex.rir_guide)}</span>
             </div>
             <div class="ex-specs-row">
@@ -379,7 +458,9 @@ document.addEventListener("DOMContentLoaded", () => {
       pain_level: parseInt(painSlider.value, 10),
       has_radiating_pain: document.getElementById("has_radiating_pain").checked,
       has_surgery: document.getElementById("has_surgery").checked,
-      notes: document.getElementById("notes").value.trim()
+      notes: document.getElementById("notes").value.trim(),
+      history: loadedHistory,
+      achievement_level: loadedHistory.length > 0 && achievementSlider ? parseInt(achievementSlider.value, 10) : null
     };
 
     // 비밀번호 입력 모달창 오픈
@@ -432,28 +513,51 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 8. 텍스트 복사 기능
+  // 헬퍼: 파일 다운로드 트리거
+  function downloadFile(content, fileName, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // 8. 앱 연동 일지 (.json) 다운로드
+  if (downloadJsonBtn) {
+    downloadJsonBtn.addEventListener("click", () => {
+      if (!currentRoutineData) return;
+      const historyData = {
+        version: "1.0",
+        export_date: new Date().toISOString(),
+        history: currentRoutineData._workout_history || []
+      };
+      const jsonContent = JSON.stringify(historyData, null, 2);
+      const fileName = `${currentRoutineData._file_name_base || "운동_일지"}.json`;
+      downloadFile(jsonContent, fileName, "application/json;charset=utf-8");
+    });
+  }
+
+  // 9. 엑셀 일지 (.csv) 다운로드
+  if (downloadCsvBtn) {
+    downloadCsvBtn.addEventListener("click", () => {
+      if (!currentRoutineData) return;
+      const csvContent = currentRoutineData._workout_csv || "\ufeff회차,날짜,성취도,분할,부위,운동 종목명,세트,횟수,RIR,관절 팁\n";
+      const fileName = `${currentRoutineData._file_name_base || "운동_일지"}.csv`;
+      downloadFile(csvContent, fileName, "text/csv;charset=utf-8");
+    });
+  }
+
+  // 10. 텍스트 복사 기능
   copyBtn.addEventListener("click", () => {
     if (!currentRoutineData) return;
     const textContent = formatRoutineToMarkdown(currentRoutineData);
     navigator.clipboard.writeText(textContent)
       .then(() => alert("운동 루틴 내용이 클립보드에 복사되었습니다!"))
       .catch(() => alert("클립보드 복사에 실패했습니다."));
-  });
-
-  // 9. Markdown 파일 다운로드 기능
-  downloadMdBtn.addEventListener("click", () => {
-    if (!currentRoutineData) return;
-    const mdContent = formatRoutineToMarkdown(currentRoutineData);
-    const blob = new Blob([mdContent], { type: "text/markdown;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `SafeFit_AI_Routine_${new Date().toISOString().slice(0, 10)}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   });
 
   // 헬퍼: HTML 특수문자 이스케이프 (XSS 방지)
@@ -476,10 +580,10 @@ document.addEventListener("DOMContentLoaded", () => {
     md += `## 📅 주간 안전 분할 루틴\n\n`;
     (data.weekly_split || []).forEach((day) => {
       md += `### ${day.day_name} (타깃: ${day.target_focus})\n`;
-      md += `| 종목명 | 세트 | 반복 | RIR 강도 | 관절 보호 팁 |\n`;
-      md += `| :--- | :--- | :--- | :--- | :--- |\n`;
+      md += `| 부위 | 종목명 | 세트 | 반복 | RIR 강도 | 관절 보호 팁 |\n`;
+      md += `| :--- | :--- | :--- | :--- | :--- | :--- |\n`;
       (day.exercises || []).forEach((ex) => {
-        md += `| ${ex.name} | ${ex.sets} | ${ex.reps} | ${ex.rir_guide} | ${ex.form_tips} |\n`;
+        md += `| ${ex.body_part || "전신"} | ${ex.name} | ${ex.sets} | ${ex.reps} | ${ex.rir_guide} | ${ex.form_tips} |\n`;
       });
       md += `\n`;
     });
