@@ -271,6 +271,7 @@
       <!-- 4. 4자리 PIN 비밀번호 인증 모달 -->
       <div id="pinModal" class="modal-backdrop hidden">
         <div class="modal-card pin-modal-card">
+          <button type="button" id="closePinModalBtn" class="pin-close-btn" aria-label="닫기">✕</button>
           <h2 class="pin-modal-title">Password</h2>
           <div class="pin-inputs-container" id="pinInputsContainer">
             <input type="password" class="pin-digit" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
@@ -279,10 +280,6 @@
             <input type="password" class="pin-digit" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
           </div>
           <p id="pinErrorMessage" class="pin-error-text hidden">비밀번호가 일치하지 않습니다.</p>
-          <div class="pin-modal-actions">
-            <button type="button" id="cancelPinBtn" class="btn btn-outline">취소</button>
-            <button type="button" id="confirmPinBtn" class="btn btn-primary pin-confirm-btn">확인</button>
-          </div>
         </div>
       </div>
     </main>
