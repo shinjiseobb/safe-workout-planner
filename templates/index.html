@@ -154,13 +154,24 @@
             </div>
           </div>
 
-          <div class="form-group">
-            <label for="environment">장비 및 운동 환경 <span class="required">*</span></label>
-            <select id="environment" name="environment" required>
-              <option value="맨몸">맨몸 및 밴드 운동 (홈트레이닝)</option>
-              <option value="홈짐 덤벨" selected>홈짐 / 조절식 덤벨 환경</option>
-              <option value="헬스장">피트니스 센터 (머신 & 프리웨이트 풀옵션)</option>
-            </select>
+          <div class="form-group-row">
+            <div class="form-group">
+              <label for="environment">장비 및 운동 환경 <span class="required">*</span></label>
+              <select id="environment" name="environment" required>
+                <option value="맨몸">맨몸 및 밴드 운동 (홈트레이닝)</option>
+                <option value="홈짐 덤벨" selected>홈짐 / 조절식 덤벨 환경</option>
+                <option value="헬스장">피트니스 센터 (머신 & 프리웨이트 풀옵션)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="cardio_option">유산소 운동 여부 <span class="required">*</span></label>
+              <select id="cardio_option" name="cardio_option" required>
+                <option value="none" selected>유산소 미포함 (근력 운동 집중)</option>
+                <option value="post_workout">본운동 후 유산소 (10~15분 쿨다운 & 체지방)</option>
+                <option value="warmup">본운동 전 웜업 유산소 (5~10분 관절 가온)</option>
+                <option value="standalone">별도 유산소 세션 (20~30분 심폐 지구력)</option>
+              </select>
+            </div>
           </div>
 
           <!-- 관절 통증 및 불편 부위 선택 -->

@@ -462,6 +462,7 @@ document.addEventListener("DOMContentLoaded", () => {
       days_per_week: parseInt(document.getElementById("days_per_week").value, 10),
       session_duration: parseInt(document.getElementById("session_duration").value, 10),
       environment: document.getElementById("environment").value,
+      cardio_option: document.getElementById("cardio_option") ? document.getElementById("cardio_option").value : "none",
       pain_areas: painAreas,
       pain_level: parseInt(painSlider.value, 10),
       has_radiating_pain: document.getElementById("has_radiating_pain").checked,

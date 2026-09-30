@@ -151,6 +151,30 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
 - 5단계 (120% 이상): 현재 부하가 너무 가볍게 느껴진 상태입니다. 안전한 범위 내에서 2.5kg~5kg 중량 증량 또는 1세트 추가를 권장하세요.
 """
 
+    # 유산소 운동 지침 생성
+    cardio_option = user_profile.get("cardio_option", "none")
+    cardio_desc_map = {
+        "none": "유산소 미포함 (근력 운동만 집중)",
+        "post_workout": "본운동 후 유산소 (10~15분 쿨다운 & 체지방 연소)",
+        "warmup": "본운동 전 웜업 유산소 (5~10분 체온 상승 & 관절 가온)",
+        "standalone": "별도 유산소 세션 (20~30분 심폐 지구력 강화)"
+    }
+    if cardio_option and cardio_option != "none":
+        cardio_instruction = f"""
+[유산소 운동 배치 및 장비/관절 맞춤 지침]
+- 희망 유산소 유형: {cardio_desc_map.get(cardio_option, cardio_option)}
+- 장비 환경: {user_profile.get('environment')}
+- 유산소 지침:
+  1) 각 일차별 운동 리스트(exercises)에 유산소 종목을 1개 포함하고 body_part를 '유산소'로 표기하세요.
+  2) [환경별 종목 분기]:
+     - '헬스장' 환경: 인클라인 트레드밀 경사 걷기, 좌식/입식 실내 사이클, 일립티컬, 천국의 계단, 로잉머신 등 헬스장 전문 유산소 머신을 처방하세요.
+     - '맨몸' 또는 '홈짐 덤벨' 환경: 대형 기구가 없으므로 야외 러닝/조깅, 야외 파워워킹(빠른 걸음), 또는 층간소음 없는 실내 맨몸 저충격 유산소(슬로우 버피 등)를 처방하세요.
+  3) [관절 통증 보호 분기]:
+     - 무릎/허리/발목 통증이 있는 경우 착지 충격(Impact force)이 큰 러닝/점프를 엄격히 배제하고, 좌식 사이클, 일립티컬, 인클라인 트레드밀 완만한 경사 걷기, 야외 파워워킹 등 '관절 저충격(Low-Impact)' 유산소로 안전하게 배정하세요.
+"""
+    else:
+        cardio_instruction = "\n[유산소 지침]: 사용자가 유산소 미포함을 선택했으므로 순수 근력/웨이트 트레이닝 종목으로만 구성하세요."
+
     prompt = f"""
 당신은 부상 예방 및 재활 운동역학 전문 시니어 스트렝스 코치입니다.
 사용자의 신체 상태, 통증 부위, 운동 환경에 맞추어 관절 부담을 최소화한 맞춤형 운동 루틴을 작성하세요.
@@ -161,17 +185,19 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
 - 주당 운동 일수: {user_profile.get('days_per_week')}일
 - 1회 운동 시간: {user_profile.get('session_duration')}분
 - 장비 환경: {user_profile.get('environment')}
+- 유산소 옵션: {cardio_desc_map.get(cardio_option, '미포함')}
 - 통증 및 불편 부위: {', '.join(user_profile.get('pain_areas', [])) if user_profile.get('pain_areas') else '없음'}
 - 통증 강도: {user_profile.get('pain_level')}/5점
 - 기타 주의사항: {user_profile.get('notes', '없음')}
 {history_feedback_section}
+{cardio_instruction}
 [실시간 웹 검색 레퍼런스 (Serper.dev 수집 데이터)]
 {search_context}
 
 [작성 및 설계 지침]
 1. 통증 부위에 전단력(Shear force)이나 압박 부하가 큰 고위험 종목은 완전히 배제하세요.
 2. 각 종목마다 RIR(Reps in Reserve, 남은 여유 횟수) 가이드를 명시하여 무리한 한계 도달(실패 지점)을 엄격히 방지하세요.
-3. 각 운동 종목에는 주요 대상 '부위(body_part)'를 가슴, 등, 어깨, 하체, 팔, 복근/코어, 전신 중 하나로 명확히 표기하세요.
+3. 각 운동 종목에는 주요 대상 '부위(body_part)'를 가슴, 등, 어깨, 하체, 팔, 복근/코어, 유산소, 전신 중 하나로 명확히 표기하세요.
 4. 1:1 관절 보호 대체 매핑 섹션에서는 흔히 다치는 '표준 운동'을 어떤 '대체 운동'으로 바꿨는지와 그 이유(관절 보호 원리)를 설명하세요.
 5. 부상 방지 케어 가이드에는 타깃 웜업, 실패 지점 도달 전 자세 붕괴 감지 팁, 쿨다운을 반드시 포함하세요.
 
@@ -187,11 +213,11 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
       "target_focus": "주요 타깃 근육 및 관절 보호 콘셉트",
       "exercises": [
         {{
-          "body_part": "부위 (가슴 / 등 / 어깨 / 하체 / 팔 / 복근 중 택1)",
+          "body_part": "부위 (가슴 / 등 / 어깨 / 하체 / 팔 / 복근 / 유산소 중 택1)",
           "name": "운동 종목명",
-          "sets": "3세트",
-          "reps": "12-15회",
-          "rir_guide": "RIR 2-3 (2~3회 더 들 수 있는 여유)",
+          "sets": "3세트 또는 15분",
+          "reps": "12-15회 또는 심박수 Zone 2 유지",
+          "rir_guide": "RIR 2-3 또는 대화 가능한 수준",
           "form_tips": "관절 부담을 줄이는 안전 자세 핵심 포인트"
         }}
       ]
@@ -384,8 +410,9 @@ def generate_routine():
         notes = data.get("notes", "")
         history = data.get("history", [])
         achievement_level = data.get("achievement_level")
+        cardio_option = data.get("cardio_option", "none")
 
-        logger.info(f"[요청 수신] 목적: {goal}, 통증강도: {pain_level}, 이전기록: {len(history)}회차, 최근성취도: {achievement_level}")
+        logger.info(f"[요청 수신] 목적: {goal}, 환경: {environment}, 유산소: {cardio_option}, 통증: {pain_level}, 이전기록: {len(history)}회차")
 
         # 0. 이용 비밀번호(PIN) 검증
         access_pin = str(data.get("access_pin", "")).strip()
@@ -415,6 +442,7 @@ def generate_routine():
             "days_per_week": days_per_week,
             "session_duration": session_duration,
             "environment": environment,
+            "cardio_option": cardio_option,
             "pain_areas": pain_areas,
             "pain_level": pain_level,
             "notes": notes,
