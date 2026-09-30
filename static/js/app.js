@@ -1081,9 +1081,40 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // QR 모달 요소
+  const qrModal = document.getElementById("qrModal");
+  const qrCodeImg = document.getElementById("qrCodeImg");
+  const closeQrModalBtn = document.getElementById("closeQrModalBtn");
+  const confirmQrModalBtn = document.getElementById("confirmQrModalBtn");
+
+  function openQrModal() {
+    if (!qrModal || !qrCodeImg) return;
+    // 현재 접속 중인 풀 URL 생성
+    const currentUrl = encodeURIComponent(window.location.origin + window.location.pathname);
+    // Google Charts API 기반 선명하고 빠른 QR 코드 이미지 생성 (240x240)
+    qrCodeImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${currentUrl}`;
+    qrModal.classList.remove("hidden");
+  }
+
+  function closeQrModal() {
+    if (qrModal) qrModal.classList.add("hidden");
+  }
+
+  if (closeQrModalBtn) closeQrModalBtn.addEventListener("click", closeQrModal);
+  if (confirmQrModalBtn) confirmQrModalBtn.addEventListener("click", closeQrModal);
+  if (qrModal) {
+    qrModal.addEventListener("click", (e) => {
+      if (e.target === qrModal) closeQrModal();
+    });
+  }
+
+  // 모바일 기기(터치/폰/태블릿)인지 여부 확인
+  const isMobileDevice = /iphone|ipad|ipod|android|blackberry|mini|windows\sce|palm/i.test(window.navigator.userAgent.toLowerCase()) || (window.innerWidth <= 768);
+
   // 설치 버튼 클릭
   pwaInstallBtn.addEventListener("click", async () => {
     if (deferredInstallPrompt) {
+      // 1. 브라우저 네이티브 PWA 설치 프롬프트가 지원되는 경우 (안드로이드 크롬 등)
       deferredInstallPrompt.prompt();
       const { outcome } = await deferredInstallPrompt.userChoice;
       if (outcome === "accepted") {
@@ -1091,9 +1122,13 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       deferredInstallPrompt = null;
     } else if (isIos) {
-      // iOS의 경우 하단 공유 버튼 안내 툴팁 표시
+      // 2. iOS 사파리 환경: 하단 공유 안내 툴팁 표시
       iosInstallTooltip.classList.toggle("hidden");
+    } else if (!isMobileDevice) {
+      // 3. PC/데스크톱 브라우저인 경우: QR 코드 팝업 모달을 띄워 스마트폰으로 간편 설치 유도
+      openQrModal();
     } else {
+      // 4. 기타 모바일 브라우저
       showToast("브라우저 메뉴(⋮)에서 '홈 화면에 추가' 또는 '앱 설치'를 클릭해 주세요.", "info", 4000);
     }
   });

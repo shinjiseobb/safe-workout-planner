@@ -1803,3 +1803,96 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
     transform: translateY(-12px) scale(0.95);
   }
 }
+
+/* =========================================================
+   스마트폰 앱 설치 QR 코드 모달 스타일
+   ========================================================= */
+.qr-modal-card {
+  max-width: 380px;
+  text-align: center;
+  padding: 30px 24px 24px;
+  position: relative;
+}
+
+.qr-modal-header {
+  margin-bottom: 18px;
+}
+
+.qr-header-icon {
+  font-size: 2.2rem;
+  display: inline-block;
+  margin-bottom: 6px;
+}
+
+.qr-modal-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: 6px;
+}
+
+.qr-modal-desc {
+  font-size: 0.88rem;
+  color: var(--gray-600);
+  line-height: 1.45;
+  word-break: keep-all;
+}
+
+.qr-code-wrapper {
+  background: #ffffff;
+  padding: 14px;
+  border-radius: 12px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid var(--gray-200);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  margin-bottom: 20px;
+}
+
+.qr-code-img {
+  width: 170px;
+  height: 170px;
+  display: block;
+}
+
+.qr-guide-box {
+  background-color: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--gray-700);
+}
+
+.qr-guide-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.qr-guide-badge {
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.qr-guide-badge.android {
+  background-color: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.qr-guide-badge.ios {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}

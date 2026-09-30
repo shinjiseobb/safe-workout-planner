@@ -338,6 +338,32 @@
           <p id="pinErrorMessage" class="pin-error-text hidden">비밀번호가 일치하지 않습니다.</p>
         </div>
       </div>
+
+      <!-- 5. 데스크톱용 스마트폰 앱 설치 QR 코드 모달 -->
+      <div id="qrModal" class="modal-backdrop hidden">
+        <div class="modal-card qr-modal-card">
+          <button type="button" id="closeQrModalBtn" class="pin-close-btn" aria-label="닫기">✕</button>
+          <div class="qr-modal-header">
+            <span class="qr-header-icon">📱</span>
+            <h2 class="qr-modal-title">스마트폰에 앱 설치하기</h2>
+            <p class="qr-modal-desc">기본 카메라 앱으로 아래 QR 코드를 비추면 모바일로 바로 이동합니다.</p>
+          </div>
+          <div class="qr-code-wrapper">
+            <img id="qrCodeImg" src="" alt="앱 접속 QR 코드" class="qr-code-img">
+          </div>
+          <div class="qr-guide-box">
+            <div class="qr-guide-step">
+              <span class="qr-guide-badge android">안드로이드</span>
+              <span>접속 후 하단 <strong>[홈 화면에 추가]</strong> 또는 <strong>[앱 설치]</strong> 탭</span>
+            </div>
+            <div class="qr-guide-step">
+              <span class="qr-guide-badge ios">아이폰</span>
+              <span>사파리 하단 공유(<strong>⎋</strong>) ➔ <strong>[홈 화면에 추가]</strong> 탭</span>
+            </div>
+          </div>
+          <button type="button" id="confirmQrModalBtn" class="btn btn-outline" style="width: 100%; margin-top: 14px;">확인 및 닫기</button>
+        </div>
+      </div>
     </main>
 
     <!-- 푸터 -->
