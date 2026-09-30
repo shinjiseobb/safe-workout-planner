@@ -929,6 +929,16 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
   font-weight: 700;
 }
 
+.spec-pill.spec-weight {
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.spec-pill.spec-weight strong {
+  color: #15803d;
+}
+
 .ex-tip-box {
   background-color: #f0f7ff;
   border: 1px solid #dbeafe;

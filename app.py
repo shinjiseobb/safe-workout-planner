@@ -185,14 +185,14 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
 - 분석 대상 최근 2사이클 수행 이력:
 {recent_history_text}
 
-[성취도 및 2사이클 기반 적응형(Adaptive) 자동 수정 지침]
+[성취도 및 2사이클 기반 적응형(Adaptive) 중량/부하 자동 조정 지침]
 - 사용자가 선택한 {split_routine} 설정에 맞추어, 최근 2사이클 동안 각 부위별 수행 이력 및 성취도 추세를 종합 평가하세요.
-- 1단계 (80% 미만): 사용자가 이전 루틴 수행 시 피로가 누적되었거나 목표량에 미달했습니다. 1세트를 줄이거나 여유 횟수를 1~2회 늘리고, 관절에 부담이 없는 가벼운 대체 동작으로 안전 마진을 확보하세요.
-- 2단계 (90%): 마지막 세트에서 1~2회 모자라 아쉽게 미달한 상태입니다. 현재 중량/세트 구성을 동결 유지하고, 세트 간 휴식 시간을 15~30초 연장하여 회복을 돕도록 처방하세요.
-- 3단계 (100%): 계획을 완벽하게 소화했으므로 이상적인 상태입니다. 계획된 정규 프로그램 및 균형 잡힌 표준 점진적 과부하를 적용하세요.
-- 4단계 (110%): 목표 횟수를 다 채우고도 힘이 남아 여유가 있었습니다. 종목당 1~2회(Reps) 반복 횟수를 소폭 상향 조정하세요.
-- 5단계 (120% 이상): 현재 부하가 너무 가볍게 느껴진 상태입니다. 안전한 범위 내에서 2.5kg~5kg 중량 증량 또는 1세트 추가를 권장하세요.
-- 최근 2사이클 동안 연속으로 4~5단계를 기록한 부위는 안정적인 증량이 확인되었으므로 적극적 과부하를 처방하고, 미달(1~2단계)이 반복된 부위는 피로 누적/과부하로 판단하여 부하를 경감하거나 관절 보호 대체 동작으로 전환하세요.
+- 1단계 (80% 미만): 피로 누적 또는 실패. 중량을 10~20% 낮추거나(디로딩) 1세트를 줄이고, 관절에 부담이 없는 대체 동작으로 안전 마진을 확보하세요.
+- 2단계 (90%): 아쉬운 미달. 현재 중량/세트 구성을 그대로 동결 유지하고 자세 안정성에 집중하세요.
+- 3단계 (100%): 계획 완벽 소화. 현재 중량을 유지하거나 다관절 메인 종목에 한해 최소 단위(+1~2.5kg) 유지를 권장하세요.
+- 4단계 (110%): 여유 완료. 덤벨 운동은 +1~2kg, 바벨/머신 운동은 +2.5kg 소폭 증량을 처방하세요.
+- 5단계 (120% 이상): 매우 가벼움. 안전한 범위 내에서 +2.5kg~5kg 적극적 증량을 처방하세요.
+- 최근 2사이클 동안 연속으로 4~5단계를 기록한 종목은 안정적인 증량을 처방하고, 미달(1~2단계)이 반복된 부위는 부하를 낮추거나 안전 대체 동작으로 전환하세요.
 """
 
     # 유산소 운동 지침 생성
@@ -272,16 +272,22 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
 {search_context}
 
 [작성 및 설계 핵심 원칙]
-1. [관절 안전 최우선 원칙]:
+1. [단일 정수(단일 숫자) 목표 횟수 필수 원칙]:
+   - '10~12회', '12-15회'와 같은 범위 표기를 절대로 하지 마세요!
+   - 사용자가 세트를 수행하고 성취도를 명확히 판단할 수 있도록 반드시 '8회', '10회', '12회', '15회'와 같이 명확한 단일 숫자 하나로만 표기하세요. (유산소는 '15분' 또는 '20분')
+2. [종목별 권장 중량(kg) 명시 원칙]:
+   - 덤벨, 바벨, 핀머신, 케이블 등 중량을 다루는 모든 종목은 사용자의 신장/체중/근력 수준 및 이전 회차 기록을 바탕으로 구체적인 권장 중량(예: '10kg', '각 8kg', '25kg')을 반드시 지정하세요.
+   - 맨몸 운동이나 밴드 운동인 경우 '자체 체중' 또는 '맨몸'으로 표기하세요.
+3. [관절 안전 최우선 원칙]:
    - 통증 부위가 체크된 경우, 해당 관절에 전단력(Shear force)이나 압박 부하가 큰 일반 표준 운동을 배제하고, 반드시 관절 보호 대체 운동(예: 어깨 통증 시 플로어 프레스 or 뉴트럴 그립 머신 프레스, 무릎 통증 시 박스 스쿼트 or 레그 익스텐션 제한 각도)으로 본운동(exercises) 목록 자체에 직접 처방하세요.
    - 통증이 전혀 없는 부위는 건강한 자극을 위한 일반 정석 복합 다관절 운동을 자신 있게 배정하세요.
-2. [스마트 종목 로테이션 규칙]:
-   - 동일한 분할이라도 이전 회차의 종목을 기계적으로 복사하지 말고, 메인 종목의 그립/각도 변주(예: 플랫 ➔ 인클라인, 와이드 ➔ 뉴트럴) 및 보조 종목(머신/덤벨/케이블)을 신선하게 로테이션하여 다양한 근섬유를 동원하세요. (단, 횟수 강제 상향은 하지 말고 사용자의 성취도 가이드에 맞추세요)
-3. [단일 실전 플로우 통합 설계]:
+4. [스마트 종목 로테이션 규칙]:
+   - 동일한 분할이라도 이전 회차의 종목을 기계적으로 복사하지 말고, 메인 종목의 그립/각도 변주(예: 플랫 ➔ 인클라인, 와이드 ➔ 뉴트럴) 및 보조 종목(머신/덤벨/케이블)을 신선하게 로테이션하여 다양한 근섬유를 동원하세요.
+5. [단일 실전 플로우 통합 설계]:
    - 웜업(동적 스트레칭)부터 본운동(근력/유산소), 쿨다운(정적 스트레칭)까지 사용자가 순서대로 바로 따라할 수 있도록 일관된 플로우로 구성하세요.
-4. [안전 여유 횟수]: 각 종목마다 무리한 실패 지점에 도달하지 않도록 여유 횟수(예: 여유 2~3회)를 명시하세요.
-5. [부위 표기]: 각 운동 종목에는 주요 대상 '부위(body_part)'를 가슴, 등, 어깨, 하체, 팔, 복근/코어, 유산소, 전신 중 하나로 명확히 표기하세요.
-6. 사용자가 선택한 운동 분할 방식('{user_profile.get('split_routine', '2분할')}')에 맞추어 weekly_split의 각 일차(day_name 및 target_focus)를 정확히 구성하세요.
+6. [안전 여유 횟수]: 각 종목마다 무리한 실패 지점에 도달하지 않도록 여유 횟수(예: 여유 2~3회)를 명시하세요.
+7. [부위 표기]: 각 운동 종목에는 주요 대상 '부위(body_part)'를 가슴, 등, 어깨, 하체, 팔, 복근/코어, 유산소, 전신 중 하나로 명확히 표기하세요.
+8. 사용자가 선택한 운동 분할 방식('{user_profile.get('split_routine', '2분할')}')에 맞추어 weekly_split의 각 일차(day_name 및 target_focus)를 정확히 구성하세요.
 
 [반드시 준수할 출력 형식]
 아래 JSON 스키마를 만족하는 순수 JSON 형식으로만 응답하세요. 백틱(```json) 마크다운 문법을 제외하고 오직 유효한 JSON 문자열만 출력해야 합니다.
@@ -297,9 +303,10 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
         {{
           "body_part": "부위 (가슴 / 등 / 어깨 / 하체 / 팔 / 복근 / 유산소 중 택1)",
           "name": "운동 종목명 (통증 부위는 관절 보호 안전 종목으로 직접 배치)",
-          "sets": "3세트 또는 15분",
-          "reps": "12-15회 또는 심박수 Zone 2 유지",
-          "rir_guide": "여유 2~3회 또는 대화 가능한 수준",
+          "weight": "권장 중량 (예: 10kg, 각 7kg, 30kg, 맨몸 종목은 자체 체중)",
+          "sets": "3세트 또는 1세트",
+          "reps": "10회 또는 12회 (범위 표기 금지, 단일 정수 또는 15분)",
+          "rir_guide": "여유 2회 또는 여유 2~3회",
           "is_replacement": true,
           "form_tips": "관절 부담을 줄이는 안전 자세 핵심 포인트"
         }}
@@ -315,12 +322,12 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
   ],
   "injury_prevention_care": {{
     "target_warmup": [
-      "관절 가동성 및 활성화 웜업 동작 1 (횟수/시간 포함)",
-      "관절 가동성 및 활성화 웜업 동작 2 (횟수/시간 포함)"
+      "관절 가동성 및 활성화 웜업 동작 1 (15회 또는 30초 등 구체적 수치)",
+      "관절 가동성 및 활성화 웜업 동작 2 (15회 또는 30초 등 구체적 수치)"
     ],
     "posture_collapse_warning": "반복 중 자세가 무너지거나 타깃 근육 대신 관절로 무게가 쏠릴 때 나타나는 징후",
     "cooldown_routine": [
-      "긴장된 길항근 및 관절 주변부 스트레칭 동작 1 (초/호흡 포함)",
+      "긴장된 길항근 및 관절 주변부 스트레칭 동작 1 (20~30초 유지 등)",
       "호흡 및 긴장 완화 쿨다운 2"
     ]
   }}
@@ -405,8 +412,8 @@ def create_workout_excel_bytes(history: list) -> bytes:
         bottom=Side(style="thin", color="D1D5DB")
     )
 
-    # 1. 헤더 (관절 안전 자세 팁 및 분할/요일 제외 8개 열)
-    headers = ["회차", "날짜", "성취도", "부위", "운동 종목명", "세트", "횟수", "여유 횟수"]
+    # 1. 헤더 (중량(kg) 열 포함 9개 열)
+    headers = ["회차", "날짜", "성취도", "부위", "운동 종목명", "중량(kg)", "세트", "횟수", "여유 횟수"]
     ws.append(headers)
     ws.row_dimensions[1].height = 28
 
@@ -438,7 +445,7 @@ def create_workout_excel_bytes(history: list) -> bytes:
         exercises = sess.get("exercises", [])
 
         if not exercises:
-            exercises = [{"day": "-", "body_part": "-", "name": "기록 없음", "sets": "-", "reps": "-", "rir_guide": "-"}]
+            exercises = [{"day": "-", "body_part": "-", "name": "기록 없음", "weight": "-", "sets": "-", "reps": "-", "rir_guide": "-"}]
 
         session_start_row = current_row
 
@@ -452,12 +459,15 @@ def create_workout_excel_bytes(history: list) -> bytes:
             # 괄호 및 괄호 안 설명 제거 (예: '여유 2회 (더 할 수 있을 거 같을 때 중단)' -> '여유 2회')
             clean_rir = re.sub(r'\(.*?\)', '', clean_rir).strip()
 
+            weight_val = ex.get("weight") or ("자체 체중" if ex.get("body_part") in ["유산소", "복근"] else "-")
+
             row_data = [
                 s_num,
                 s_date,
                 s_lvl,
                 ex.get("body_part", "전신"),
                 ex.get("name", ""),
+                weight_val,
                 ex.get("sets", ""),
                 clean_reps,
                 clean_rir
@@ -484,16 +494,17 @@ def create_workout_excel_bytes(history: list) -> bytes:
             ws.merge_cells(start_row=session_start_row, start_column=2, end_row=session_end_row, end_column=2)
             ws.merge_cells(start_row=session_start_row, start_column=3, end_row=session_end_row, end_column=3)
 
-    # 3. 열 너비 지정 (날짜 16으로 ######## 방지, 종목명 35로 3칸 분량 확보)
+    # 3. 열 너비 지정 (날짜 16, 종목명 35, 중량 14)
     col_widths = {
         "A": 11,  # 회차
         "B": 16,  # 날짜 (YYYY-MM-DD 안 잘림)
         "C": 14,  # 성취도
         "D": 12,  # 부위
         "E": 35,  # 운동 종목명 (일반 셀 3칸 너비)
-        "F": 12,  # 세트
-        "G": 16,  # 횟수
-        "H": 15   # 여유 횟수
+        "F": 14,  # 중량(kg)
+        "G": 12,  # 세트
+        "H": 16,  # 횟수
+        "I": 15   # 여유 횟수
     }
     for col_letter, width in col_widths.items():
         ws.column_dimensions[col_letter].width = width
@@ -552,6 +563,7 @@ def update_workout_history(previous_history: list, current_routine: dict, achiev
                 "day": day_name,
                 "body_part": ex.get("body_part", "전신"),
                 "name": ex.get("name", ""),
+                "weight": ex.get("weight") or ("자체 체중" if ex.get("body_part") in ["유산소", "복근"] else "-"),
                 "sets": ex.get("sets", ""),
                 "reps": ex.get("reps", ""),
                 "rir_guide": ex.get("rir_guide", ""),
@@ -569,7 +581,7 @@ def update_workout_history(previous_history: list, current_routine: dict, achiev
     csv_io = io.StringIO()
     csv_io.write('\ufeff')
     writer = csv.writer(csv_io)
-    writer.writerow(["회차", "날짜", "성취도", "성취도 상세", "부위", "운동 종목명", "세트", "횟수", "여유 횟수"])
+    writer.writerow(["회차", "날짜", "성취도", "성취도 상세", "부위", "운동 종목명", "중량(kg)", "세트", "횟수", "여유 횟수"])
 
     for sess in history:
         s_num = f"{sess.get('session_num', 1)}회차"
@@ -597,6 +609,7 @@ def update_workout_history(previous_history: list, current_routine: dict, achiev
             clean_reps = re.sub(r'^(양쪽\s*번갈아\s*|좌우\s*각각\s*|각각\s*|양쪽\s*|한쪽당\s*)', '', str(ex.get("reps", ""))).strip()
             clean_rir = re.sub(r'RIR\s*', '여유 ', str(ex.get("rir_guide", "")), flags=re.IGNORECASE)
             clean_rir = re.sub(r'\(.*?\)', '', clean_rir).strip()
+            weight_val = ex.get("weight") or ("자체 체중" if ex.get("body_part") in ["유산소", "복근"] else "-")
 
             writer.writerow([
                 row_s_num,
@@ -605,6 +618,7 @@ def update_workout_history(previous_history: list, current_routine: dict, achiev
                 row_s_desc,
                 ex.get("body_part", ""),
                 ex.get("name", ""),
+                weight_val,
                 ex.get("sets", ""),
                 clean_reps,
                 clean_rir

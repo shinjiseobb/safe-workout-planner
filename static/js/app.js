@@ -424,6 +424,7 @@ document.addEventListener("DOMContentLoaded", () => {
               <span class="rir-badge">${escapeHtml(ex.rir_guide || "").replace(/RIR\s*/gi, "여유 ")}</span>
             </div>
             <div class="ex-specs-row">
+              ${ex.weight ? `<span class="spec-pill spec-weight"><strong>중량</strong> ${escapeHtml(ex.weight)}</span>` : ""}
               <span class="spec-pill"><strong>세트</strong> ${escapeHtml(ex.sets)}</span>
               <span class="spec-pill"><strong>반복</strong> ${escapeHtml(ex.reps)}</span>
             </div>
@@ -843,12 +844,12 @@ document.addEventListener("DOMContentLoaded", () => {
     md += `## 💪 STEP 2. 본운동 (통증 관절 보호 안전 루틴)\n\n`;
     (data.weekly_split || []).forEach((day) => {
       md += `### ${day.day_name} (타깃: ${day.target_focus})\n`;
-      md += `| 부위 | 종목명 | 세트 | 반복 | 여유 횟수 | 관절 보호 팁 |\n`;
-      md += `| :--- | :--- | :--- | :--- | :--- | :--- |\n`;
+      md += `| 부위 | 종목명 | 중량 | 세트 | 반복 | 여유 횟수 | 관절 보호 팁 |\n`;
+      md += `| :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n`;
       (day.exercises || []).forEach((ex) => {
         const rirText = String(ex.rir_guide || "").replace(/RIR\s*/gi, "여유 ");
         const safeTag = ex.is_replacement ? " [🛡️관절보호 대체]" : "";
-        md += `| ${ex.body_part || "전신"} | ${ex.name}${safeTag} | ${ex.sets} | ${ex.reps} | ${rirText} | ${ex.form_tips} |\n`;
+        const weightText = ex.weight || "-";
       });
       md += `\n`;
     });
