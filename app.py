@@ -3,12 +3,16 @@ import json
 import logging
 import csv
 import io
+import base64
+import re
 from datetime import datetime, timezone, timedelta
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
 import requests
 from google import genai
 from google.genai import types
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
 # 한국 표준시(KST) 타임존 설정
 KST = timezone(timedelta(hours=9))
@@ -136,19 +140,47 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
 
     history_feedback_section = ""
     if history and achievement_level:
-        last_session = history[-1]
-        history_feedback_section = f"""
-[사용자의 이전 누적 운동 이력 및 직전 성취도 피드백]
-- 현재 누적 운동 기록: 총 {len(history)}회차 보유
-- 직전 세션 평가 성취도: {achievement_text_map.get(int(achievement_level), f'{achievement_level}단계')}
-- 직전 세션 루틴: {last_session.get('routine_title', '이전 운동')} (수행일: {last_session.get('date', '최근')})
+        split_routine = user_profile.get("split_routine", "3분할")
+        cycle_size_map = {
+            "무분할": 1,
+            "2분할": 2,
+            "3분할": 3,
+            "4분할": 4
+        }
+        cycle_size = cycle_size_map.get(split_routine, 3)
+        target_count = max(2, cycle_size * 2)  # 최근 2사이클 분량 (무분할: 2~3회, 2분할: 4회, 3분할: 6회, 4분할: 8회)
+        recent_sessions = history[-target_count:]
 
-[성취도 기반 적응형(Adaptive) 자동 수정 지침]
+        recent_summary_list = []
+        for sess in recent_sessions:
+            s_num = sess.get("session_num", "?")
+            s_date = sess.get("date", "")
+            s_lvl = sess.get("achievement_level", 3)
+            s_desc = achievement_text_map.get(int(s_lvl), f"{s_lvl}단계")
+            ex_details = [
+                f"{ex.get('body_part', '전신')}: {ex.get('name', '')} ({ex.get('sets', '')} {ex.get('reps', '')}, {ex.get('rir_guide', '')})"
+                for ex in sess.get("exercises", [])
+            ]
+            ex_summary_str = "; ".join(ex_details) if ex_details else "운동 기록 없음"
+            recent_summary_list.append(f"  * {s_num}회차({s_date}) [{s_desc}] -> {ex_summary_str}")
+
+        recent_history_text = "\n".join(recent_summary_list)
+
+        history_feedback_section = f"""
+[사용자의 이전 누적 운동 이력 및 최근 2사이클({len(recent_sessions)}회차) 성취도 분석]
+- 누적 총 운동 횟수: 총 {len(history)}회차 보유
+- 직전 세션 평가 성취도: {achievement_text_map.get(int(achievement_level), f'{achievement_level}단계')}
+- 분석 대상 최근 2사이클 수행 이력:
+{recent_history_text}
+
+[성취도 및 2사이클 기반 적응형(Adaptive) 자동 수정 지침]
+- 사용자가 선택한 {split_routine} 설정에 맞추어, 최근 2사이클 동안 각 부위별 수행 이력 및 성취도 추세를 종합 평가하세요.
 - 1단계 (80% 미만): 사용자가 이전 루틴 수행 시 피로가 누적되었거나 목표량에 미달했습니다. 1세트를 줄이거나 여유 횟수를 1~2회 늘리고, 관절에 부담이 없는 가벼운 대체 동작으로 안전 마진을 확보하세요.
 - 2단계 (90%): 마지막 세트에서 1~2회 모자라 아쉽게 미달한 상태입니다. 현재 중량/세트 구성을 동결 유지하고, 세트 간 휴식 시간을 15~30초 연장하여 회복을 돕도록 처방하세요.
 - 3단계 (100%): 계획을 완벽하게 소화했으므로 이상적인 상태입니다. 계획된 정규 프로그램 및 균형 잡힌 표준 점진적 과부하를 적용하세요.
 - 4단계 (110%): 목표 횟수를 다 채우고도 힘이 남아 여유가 있었습니다. 종목당 1~2회(Reps) 반복 횟수를 소폭 상향 조정하세요.
 - 5단계 (120% 이상): 현재 부하가 너무 가볍게 느껴진 상태입니다. 안전한 범위 내에서 2.5kg~5kg 중량 증량 또는 1세트 추가를 권장하세요.
+- 최근 2사이클 동안 연속으로 4~5단계를 기록한 부위는 안정적인 증량이 확인되었으므로 적극적 과부하를 처방하고, 미달(1~2단계)이 반복된 부위는 피로 누적/과부하로 판단하여 부하를 경감하거나 관절 보호 대체 동작으로 전환하세요.
 """
 
     # 유산소 운동 지침 생성
@@ -282,11 +314,129 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
     raise RuntimeError(f"모든 Gemini 모델 호출 실패: {last_err}")
 
 
+def create_workout_excel_bytes(history: list) -> bytes:
+    """
+    사용자의 누적 운동 일지를 전문 엑셀(.xlsx) 파일 바이너리로 생성
+    1) 관절 안전 자세 팁 열 제거
+    2) 동일 회차의 연속 운동들에 대해 회차(A), 날짜(B), 성취도(C) 세로 병합
+    3) 날짜 열 너비를 16으로 확보하여 ######## 현상 원천 방지
+    4) 운동 종목명 열 너비를 35(3칸 크기)로 확보하여 긴 명칭 잘림 방지
+    5) 횟수 앞의 '양쪽 번갈아', '각각', '좌우 각각' 등 불필요한 수식어 자동 제거
+    """
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "운동 일지"
+
+    # 엑셀 격자선(Gridlines) 표시 설정
+    ws.views.sheetView[0].showGridLines = True
+
+    # 스타일 정의
+    header_fill = PatternFill(start_color="EBF3FB", end_color="EBF3FB", fill_type="solid")
+    header_font = Font(name="Malgun Gothic", size=11, bold=True, color="1E3A8A")
+    data_font = Font(name="Malgun Gothic", size=10, color="1F2937")
+
+    center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    left_align = Alignment(horizontal="left", vertical="center", wrap_text=True)
+
+    thin_border = Border(
+        left=Side(style="thin", color="D1D5DB"),
+        right=Side(style="thin", color="D1D5DB"),
+        top=Side(style="thin", color="D1D5DB"),
+        bottom=Side(style="thin", color="D1D5DB")
+    )
+
+    # 1. 헤더 (관절 안전 자세 팁 제외 9개 열)
+    headers = ["회차", "날짜", "성취도", "분할/요일", "부위", "운동 종목명", "세트", "횟수", "여유 횟수"]
+    ws.append(headers)
+    ws.row_dimensions[1].height = 28
+
+    for col_idx in range(1, len(headers) + 1):
+        cell = ws.cell(row=1, column=col_idx)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = center_align
+        cell.border = thin_border
+
+    # 2. 데이터 행 작성
+    current_row = 2
+
+    for sess in history:
+        s_num = f"{sess.get('session_num', 1)}회차"
+        s_date = sess.get("date", "")
+        s_lvl = f"{sess.get('achievement_level', 3)}단계"
+        exercises = sess.get("exercises", [])
+
+        if not exercises:
+            exercises = [{"day": "-", "body_part": "-", "name": "기록 없음", "sets": "-", "reps": "-", "rir_guide": "-"}]
+
+        session_start_row = current_row
+
+        for ex in exercises:
+            raw_reps = str(ex.get("reps", ""))
+            # 횟수 앞의 '양쪽 번갈아', '각각', '좌우 각각', '한쪽당' 등 수식어 제거
+            clean_reps = re.sub(r'^(양쪽\s*번갈아\s*|좌우\s*각각\s*|각각\s*|양쪽\s*|한쪽당\s*)', '', raw_reps).strip()
+
+            raw_rir = str(ex.get("rir_guide", ""))
+            clean_rir = re.sub(r'RIR\s*', '여유 ', raw_rir, flags=re.IGNORECASE)
+
+            row_data = [
+                s_num,
+                s_date,
+                s_lvl,
+                ex.get("day", ""),
+                ex.get("body_part", "전신"),
+                ex.get("name", ""),
+                ex.get("sets", ""),
+                clean_reps,
+                clean_rir
+            ]
+            ws.append(row_data)
+            ws.row_dimensions[current_row].height = 24
+
+            for col_idx in range(1, len(headers) + 1):
+                cell = ws.cell(row=current_row, column=col_idx)
+                cell.font = data_font
+                cell.border = thin_border
+                if col_idx == 6:  # 운동 종목명은 좌측 정렬
+                    cell.alignment = left_align
+                else:
+                    cell.alignment = center_align
+
+            current_row += 1
+
+        session_end_row = current_row - 1
+
+        # 같은 회차에 운동이 2개 이상이면 회차(col 1), 날짜(col 2), 성취도(col 3) 세로 병합
+        if session_end_row > session_start_row:
+            ws.merge_cells(start_row=session_start_row, start_column=1, end_row=session_end_row, end_column=1)
+            ws.merge_cells(start_row=session_start_row, start_column=2, end_row=session_end_row, end_column=2)
+            ws.merge_cells(start_row=session_start_row, start_column=3, end_row=session_end_row, end_column=3)
+
+    # 3. 열 너비 지정 (날짜 16으로 ######## 방지, 종목명 35로 3칸 분량 확보)
+    col_widths = {
+        "A": 11,  # 회차
+        "B": 16,  # 날짜 (YYYY-MM-DD 안 잘림)
+        "C": 14,  # 성취도
+        "D": 16,  # 분할/요일
+        "E": 12,  # 부위
+        "F": 35,  # 운동 종목명 (일반 셀 3칸 너비)
+        "G": 12,  # 세트
+        "H": 16,  # 횟수
+        "I": 18   # 여유 횟수
+    }
+    for col_letter, width in col_widths.items():
+        ws.column_dimensions[col_letter].width = width
+
+    excel_io = io.BytesIO()
+    wb.save(excel_io)
+    excel_io.seek(0)
+    return excel_io.getvalue()
+
+
 def update_workout_history(previous_history: list, current_routine: dict, achievement_level: int = None):
     """
-    10회 FIFO 누적 운동 일지 생성 및 엑셀용 CSV 변환
-    - 10회 미만: 기존 기록 뒤에 신규 기록 추가
-    - 10회 초과: 가장 오래된 첫 번째 기록을 지우고 최신 10회치 유지
+    영구 무제한 누적 운동 일지 생성 및 엑셀(.xlsx) / CSV 생성
+    - 1회차부터 영구 보존 누적
     """
     achievement_map = {
         1: "1단계 (80% 미만 성취 - 피로 누적)",
@@ -328,39 +478,49 @@ def update_workout_history(previous_history: list, current_routine: dict, achiev
                 "form_tips": ex.get("form_tips", "")
             })
 
-    # FIFO: 최대 10회분 유지 (10회 초과 시 가장 오래된 1번째 기록 제거)
+    # 영구 누적 (제한 없이 계속 누적)
     history.append(new_session)
-    while len(history) > 10:
-        history.pop(0)
 
-    # 엑셀 열람용 CSV 생성 (한글 깨짐 방지 UTF-8 BOM 포함)
+    # 1. 엑셀 .xlsx 바이너리 생성 및 Base64 인코딩
+    excel_bytes = create_workout_excel_bytes(history)
+    excel_base64 = base64.b64encode(excel_bytes).decode("utf-8")
+
+    # 2. 엑셀 열람용 CSV 생성 (한글 깨짐 방지 UTF-8 BOM 포함, 자세 팁 열 제외)
     csv_io = io.StringIO()
     csv_io.write('\ufeff')
     writer = csv.writer(csv_io)
-    writer.writerow(["회차", "날짜", "성취도 단계", "성취도 설명", "분할/요일", "부위", "운동 종목명", "세트", "횟수", "여유 횟수", "관절 안전 자세 팁"])
+    writer.writerow(["회차", "날짜", "성취도 단계", "성취도 설명", "분할/요일", "부위", "운동 종목명", "세트", "횟수", "여유 횟수"])
 
     for sess in history:
         s_num = f"{sess.get('session_num', 1)}회차"
         s_date = sess.get("date", "")
         s_lvl = f"{sess.get('achievement_level', 3)}단계"
         s_desc = sess.get("achievement_desc", "")
-        for ex in sess.get("exercises", []):
+        exercises = sess.get("exercises", [])
+        for ex_idx, ex in enumerate(exercises):
+            # 연속 행 회차/날짜 깔끔 표기 (첫 번째 행만 표기, 이후 빈칸)
+            row_s_num = s_num if ex_idx == 0 else ""
+            row_s_date = s_date if ex_idx == 0 else ""
+            row_s_lvl = s_lvl if ex_idx == 0 else ""
+            row_s_desc = s_desc if ex_idx == 0 else ""
+            clean_reps = re.sub(r'^(양쪽\s*번갈아\s*|좌우\s*각각\s*|각각\s*|양쪽\s*|한쪽당\s*)', '', str(ex.get("reps", ""))).strip()
+            clean_rir = re.sub(r'RIR\s*', '여유 ', str(ex.get("rir_guide", "")), flags=re.IGNORECASE)
+
             writer.writerow([
-                s_num,
-                s_date,
-                s_lvl,
-                s_desc,
+                row_s_num,
+                row_s_date,
+                row_s_lvl,
+                row_s_desc,
                 ex.get("day", ""),
                 ex.get("body_part", ""),
                 ex.get("name", ""),
                 ex.get("sets", ""),
-                ex.get("reps", ""),
-                ex.get("rir_guide", ""),
-                ex.get("form_tips", "")
+                clean_reps,
+                clean_rir
             ])
 
     file_name_base = f"{file_date_str}_{new_session_num}회차_운동_일지"
-    return history, csv_io.getvalue(), file_name_base, new_session_num
+    return history, excel_base64, csv_io.getvalue(), file_name_base, new_session_num
 
 
 @app.route("/")
@@ -453,12 +613,13 @@ def generate_routine():
         }
         routine_json = generate_routine_with_gemini(user_profile, search_context)
 
-        # 4. 10회치 FIFO 일지 업데이트 및 CSV 생성
-        updated_history, csv_content, file_name_base, current_session_num = update_workout_history(
+        # 4. 영구 누적 일지 업데이트 및 엑셀(.xlsx) / CSV 생성
+        updated_history, excel_base64, csv_content, file_name_base, current_session_num = update_workout_history(
             history, routine_json, achievement_level
         )
 
         routine_json["_workout_history"] = updated_history
+        routine_json["_workout_xlsx_base64"] = excel_base64
         routine_json["_workout_csv"] = csv_content
         routine_json["_file_name_base"] = file_name_base
         routine_json["_current_session_num"] = current_session_num

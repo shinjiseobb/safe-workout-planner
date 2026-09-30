@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // 도구 버튼
   const copyBtn = document.getElementById("copyBtn");
   const downloadJsonBtn = document.getElementById("downloadJsonBtn");
-  const downloadCsvBtn = document.getElementById("downloadCsvBtn");
+  const downloadExcelBtn = document.getElementById("downloadExcelBtn") || document.getElementById("downloadCsvBtn");
 
   // 운동 일지 불러오기 및 성취도 선택 요소
   const workoutLogFileInput = document.getElementById("workoutLogFileInput");
@@ -550,13 +550,37 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 9. 엑셀 일지 (.csv) 다운로드
-  if (downloadCsvBtn) {
-    downloadCsvBtn.addEventListener("click", () => {
+  // 9. 엑셀 일지 (.xlsx) 다운로드
+  if (downloadExcelBtn) {
+    downloadExcelBtn.addEventListener("click", () => {
       if (!currentRoutineData) return;
-      const csvContent = currentRoutineData._workout_csv || "\ufeff회차,날짜,성취도,분할,부위,운동 종목명,세트,횟수,여유 횟수,관절 팁\n";
-      const fileName = `${currentRoutineData._file_name_base || "운동_일지"}.csv`;
-      downloadFile(csvContent, fileName, "text/csv;charset=utf-8");
+      const baseName = currentRoutineData._file_name_base || "운동_일지";
+
+      if (currentRoutineData._workout_xlsx_base64) {
+        // Base64 문자열을 바이너리 Blob으로 변환하여 .xlsx 파일 다운로드
+        const byteCharacters = atob(currentRoutineData._workout_xlsx_base64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+        const fileName = `${baseName}.xlsx`;
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else {
+        // 폴백: CSV 다운로드
+        const csvContent = currentRoutineData._workout_csv || "\ufeff회차,날짜,성취도,분할,부위,운동 종목명,세트,횟수,여유 횟수\n";
+        const fileName = `${baseName}.csv`;
+        downloadFile(csvContent, fileName, "text/csv;charset=utf-8");
+      }
     });
   }
 
