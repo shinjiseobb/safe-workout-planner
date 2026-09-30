@@ -359,7 +359,8 @@ def update_workout_history(previous_history: list, current_routine: dict, achiev
                 ex.get("form_tips", "")
             ])
 
-    return history, csv_io.getvalue(), file_date_str
+    file_name_base = f"{file_date_str}_{new_session_num}회차_운동_일지"
+    return history, csv_io.getvalue(), file_name_base, new_session_num
 
 
 @app.route("/")
@@ -453,13 +454,14 @@ def generate_routine():
         routine_json = generate_routine_with_gemini(user_profile, search_context)
 
         # 4. 10회치 FIFO 일지 업데이트 및 CSV 생성
-        updated_history, csv_content, file_date_str = update_workout_history(
+        updated_history, csv_content, file_name_base, current_session_num = update_workout_history(
             history, routine_json, achievement_level
         )
 
         routine_json["_workout_history"] = updated_history
         routine_json["_workout_csv"] = csv_content
-        routine_json["_file_name_base"] = f"운동_일지_{file_date_str}"
+        routine_json["_file_name_base"] = file_name_base
+        routine_json["_current_session_num"] = current_session_num
 
         return jsonify({
             "status": "success",

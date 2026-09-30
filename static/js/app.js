@@ -618,6 +618,12 @@ document.addEventListener("DOMContentLoaded", () => {
       md += `- ${c}\n`;
     });
 
+    const historyList = data._workout_history || [];
+    const latestSession = historyList.length > 0 ? historyList[historyList.length - 1] : null;
+    const sessionNum = data._current_session_num || (latestSession ? latestSession.session_num : 1);
+
+    md += `\n---\n_${sessionNum}회차\n---\n`;
+
     return md;
   }
 
