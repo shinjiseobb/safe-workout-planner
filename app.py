@@ -155,8 +155,15 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
         for sess in recent_sessions:
             s_num = sess.get("session_num", "?")
             s_date = sess.get("date", "")
-            s_lvl = sess.get("achievement_level", 3)
-            s_desc = achievement_text_map.get(int(s_lvl), f"{s_lvl}단계")
+            raw_lvl = sess.get("achievement_level")
+            # 세션의 achievement_level이 None이고 직전 세션이면 사용자가 방금 전달한 achievement_level 적용
+            if raw_lvl is None and sess == history[-1] and achievement_level is not None:
+                raw_lvl = achievement_level
+            try:
+                safe_lvl = int(raw_lvl) if raw_lvl is not None else 3
+            except (ValueError, TypeError):
+                safe_lvl = 3
+            s_desc = achievement_text_map.get(safe_lvl, f"{safe_lvl}단계")
             ex_details = [
                 f"{ex.get('body_part', '전신')}: {ex.get('name', '')} ({ex.get('sets', '')} {ex.get('reps', '')}, {ex.get('rir_guide', '')})"
                 for ex in sess.get("exercises", [])
@@ -166,10 +173,15 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
 
         recent_history_text = "\n".join(recent_summary_list)
 
+        try:
+            curr_lvl = int(achievement_level) if achievement_level is not None else 3
+        except (ValueError, TypeError):
+            curr_lvl = 3
+
         history_feedback_section = f"""
 [사용자의 이전 누적 운동 이력 및 최근 2사이클({len(recent_sessions)}회차) 성취도 분석]
 - 누적 총 운동 횟수: 총 {len(history)}회차 보유
-- 직전 세션 평가 성취도: {achievement_text_map.get(int(achievement_level), f'{achievement_level}단계')}
+- 직전 세션 평가 성취도: {achievement_text_map.get(curr_lvl, f'{curr_lvl}단계')}
 - 분석 대상 최근 2사이클 수행 이력:
 {recent_history_text}
 
@@ -374,8 +386,15 @@ def create_workout_excel_bytes(history: list) -> bytes:
         s_num = f"{sess.get('session_num', 1)}회차"
         s_date = sess.get("date", "")
         lvl = sess.get("achievement_level")
-        if lvl is not None and int(lvl) in ACHIEVEMENT_LABEL_MAP:
-            s_lvl = ACHIEVEMENT_LABEL_MAP[int(lvl)]
+        safe_lvl = None
+        if lvl is not None:
+            try:
+                safe_lvl = int(lvl)
+            except (ValueError, TypeError):
+                safe_lvl = None
+
+        if safe_lvl is not None and safe_lvl in ACHIEVEMENT_LABEL_MAP:
+            s_lvl = ACHIEVEMENT_LABEL_MAP[safe_lvl]
         else:
             s_lvl = sess.get("achievement_label", "(수행 예정)")
         exercises = sess.get("exercises", [])
@@ -467,10 +486,13 @@ def update_workout_history(previous_history: list, current_routine: dict, achiev
 
     # 1. 이전 회차가 있고 사용자가 성취도를 평가한 경우 -> 직전 세션(history[-1])에 소급 확정 기록
     if history and achievement_level is not None:
-        eval_level = int(achievement_level)
-        history[-1]["achievement_level"] = eval_level
-        history[-1]["achievement_label"] = ACHIEVEMENT_LABEL_MAP.get(eval_level, f"{eval_level}단계")
-        history[-1]["achievement_desc"] = achievement_map.get(eval_level, f"{eval_level}단계")
+        try:
+            eval_level = int(achievement_level)
+            history[-1]["achievement_level"] = eval_level
+            history[-1]["achievement_label"] = ACHIEVEMENT_LABEL_MAP.get(eval_level, f"{eval_level}단계")
+            history[-1]["achievement_desc"] = achievement_map.get(eval_level, f"{eval_level}단계")
+        except (ValueError, TypeError):
+            pass
 
     new_session_num = (history[-1].get("session_num", len(history)) + 1) if history else 1
 
@@ -515,8 +537,15 @@ def update_workout_history(previous_history: list, current_routine: dict, achiev
         s_num = f"{sess.get('session_num', 1)}회차"
         s_date = sess.get("date", "")
         lvl = sess.get("achievement_level")
-        if lvl is not None and int(lvl) in ACHIEVEMENT_LABEL_MAP:
-            s_lvl = ACHIEVEMENT_LABEL_MAP[int(lvl)]
+        safe_lvl = None
+        if lvl is not None:
+            try:
+                safe_lvl = int(lvl)
+            except (ValueError, TypeError):
+                safe_lvl = None
+
+        if safe_lvl is not None and safe_lvl in ACHIEVEMENT_LABEL_MAP:
+            s_lvl = ACHIEVEMENT_LABEL_MAP[safe_lvl]
         else:
             s_lvl = sess.get("achievement_label", "(수행 예정)")
         s_desc = sess.get("achievement_desc", "(수행 예정)")
