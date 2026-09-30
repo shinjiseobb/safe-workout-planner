@@ -61,8 +61,10 @@ document.addEventListener("DOMContentLoaded", () => {
     painLevelText.textContent = painDescriptions[val] || `${val}점`;
     if (val >= 4) {
       painLevelText.style.color = "#dc2626";
+      painLevelText.style.backgroundColor = "#fee2e2";
     } else {
       painLevelText.style.color = "#2563eb";
+      painLevelText.style.backgroundColor = "#eff6ff";
     }
   });
 

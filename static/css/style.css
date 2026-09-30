@@ -329,12 +329,22 @@ select:focus, input[type="text"]:focus {
 
 /* 통증 슬라이더 */
 .slider-header {
-  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .pain-score {
+  background-color: var(--primary-light);
   color: var(--primary-color);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.86rem;
   font-weight: 700;
+  transition: all 0.2s ease;
 }
 
 .slider {
@@ -352,12 +362,18 @@ select:focus, input[type="text"]:focus {
   justify-content: space-between;
   font-size: 0.8rem;
   color: var(--gray-600);
-  margin-top: 6px;
+  margin-top: 8px;
+}
+
+.slider-marks span {
+  white-space: nowrap;
+  text-align: center;
+  font-size: 0.8rem;
 }
 
 .danger-mark {
   color: var(--danger-border);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .field-hint {
@@ -1007,6 +1023,12 @@ select:focus, input[type="text"]:focus {
   .chip-item {
     padding: 8px 4px;
     font-size: 0.82rem;
+  }
+
+  .slider-marks span {
+    font-size: 0.74rem;
+    letter-spacing: -0.4px;
+    white-space: nowrap;
   }
 
   .result-header {
