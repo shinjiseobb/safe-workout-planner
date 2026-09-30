@@ -459,7 +459,7 @@ document.addEventListener("DOMContentLoaded", () => {
     pendingPayload = {
       goal: document.getElementById("goal").value,
       experience: document.getElementById("experience").value,
-      days_per_week: parseInt(document.getElementById("days_per_week").value, 10),
+      split_routine: document.getElementById("split_routine") ? document.getElementById("split_routine").value : "2분할",
       session_duration: parseInt(document.getElementById("session_duration").value, 10),
       environment: document.getElementById("environment").value,
       cardio_option: document.getElementById("cardio_option") ? document.getElementById("cardio_option").value : "none",

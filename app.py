@@ -182,7 +182,7 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
 [사용자 프로필 정보]
 - 운동 목적: {user_profile.get('goal')}
 - 숙련도: {user_profile.get('experience')}
-- 주당 운동 일수: {user_profile.get('days_per_week')}일
+- 운동 분할 방식: {user_profile.get('split_routine', '2분할')}
 - 1회 운동 시간: {user_profile.get('session_duration')}분
 - 장비 환경: {user_profile.get('environment')}
 - 유산소 옵션: {cardio_desc_map.get(cardio_option, '미포함')}
@@ -200,6 +200,7 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
 3. 각 운동 종목에는 주요 대상 '부위(body_part)'를 가슴, 등, 어깨, 하체, 팔, 복근/코어, 유산소, 전신 중 하나로 명확히 표기하세요.
 4. 1:1 관절 보호 대체 매핑 섹션에서는 흔히 다치는 '표준 운동'을 어떤 '대체 운동'으로 바꿨는지와 그 이유(관절 보호 원리)를 설명하세요.
 5. 부상 방지 케어 가이드에는 타깃 웜업, 실패 지점 도달 전 자세 붕괴 감지 팁, 쿨다운을 반드시 포함하세요.
+6. 사용자가 선택한 운동 분할 방식('{user_profile.get('split_routine', '2분할')}')에 맞추어 weekly_split의 각 일차(day_name 및 target_focus)를 정확히 구성하세요. (예: 무분할=전신 루틴, 2분할=1일차 상체/2일차 하체, 3분할=1일차 밀기(Push)/2일차 당기기(Pull)/3일차 하체(Legs), 4분할=가슴/등/어깨/하체)
 
 [반드시 준수할 출력 형식]
 아래 JSON 스키마를 만족하는 순수 JSON 형식으로만 응답하세요. 백틱(```json) 마크다운 문법을 제외하고 오직 유효한 JSON 문자열만 출력해야 합니다.
@@ -400,7 +401,7 @@ def generate_routine():
 
         goal = data.get("goal", "체력 증진")
         experience = data.get("experience", "입문")
-        days_per_week = data.get("days_per_week", 3)
+        split_routine = data.get("split_routine", data.get("days_per_week", "2분할"))
         session_duration = data.get("session_duration", 50)
         environment = data.get("environment", "맨몸")
         pain_areas = data.get("pain_areas", [])
@@ -412,7 +413,7 @@ def generate_routine():
         achievement_level = data.get("achievement_level")
         cardio_option = data.get("cardio_option", "none")
 
-        logger.info(f"[요청 수신] 목적: {goal}, 환경: {environment}, 유산소: {cardio_option}, 통증: {pain_level}, 이전기록: {len(history)}회차")
+        logger.info(f"[요청 수신] 목적: {goal}, 분할: {split_routine}, 환경: {environment}, 유산소: {cardio_option}, 통증: {pain_level}")
 
         # 0. 이용 비밀번호(PIN) 검증
         access_pin = str(data.get("access_pin", "")).strip()
@@ -439,7 +440,7 @@ def generate_routine():
         user_profile = {
             "goal": goal,
             "experience": experience,
-            "days_per_week": days_per_week,
+            "split_routine": split_routine,
             "session_duration": session_duration,
             "environment": environment,
             "cardio_option": cardio_option,
