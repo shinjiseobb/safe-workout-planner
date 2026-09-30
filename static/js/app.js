@@ -260,7 +260,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 ${ex.body_part ? `<span class="body-part-badge">${escapeHtml(ex.body_part)}</span>` : ""}
                 <span class="ex-title">${escapeHtml(ex.name)}</span>
               </div>
-              <span class="rir-badge">${escapeHtml(ex.rir_guide)}</span>
+              <span class="rir-badge">${escapeHtml(ex.rir_guide || "").replace(/RIR\s*/gi, "여유 ")}</span>
             </div>
             <div class="ex-specs-row">
               <span class="spec-pill"><strong>세트</strong> ${escapeHtml(ex.sets)}</span>
@@ -554,7 +554,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (downloadCsvBtn) {
     downloadCsvBtn.addEventListener("click", () => {
       if (!currentRoutineData) return;
-      const csvContent = currentRoutineData._workout_csv || "\ufeff회차,날짜,성취도,분할,부위,운동 종목명,세트,횟수,RIR,관절 팁\n";
+      const csvContent = currentRoutineData._workout_csv || "\ufeff회차,날짜,성취도,분할,부위,운동 종목명,세트,횟수,여유 횟수,관절 팁\n";
       const fileName = `${currentRoutineData._file_name_base || "운동_일지"}.csv`;
       downloadFile(csvContent, fileName, "text/csv;charset=utf-8");
     });
@@ -589,10 +589,11 @@ document.addEventListener("DOMContentLoaded", () => {
     md += `## 📅 주간 안전 분할 루틴\n\n`;
     (data.weekly_split || []).forEach((day) => {
       md += `### ${day.day_name} (타깃: ${day.target_focus})\n`;
-      md += `| 부위 | 종목명 | 세트 | 반복 | RIR 강도 | 관절 보호 팁 |\n`;
+      md += `| 부위 | 종목명 | 세트 | 반복 | 여유 횟수 | 관절 보호 팁 |\n`;
       md += `| :--- | :--- | :--- | :--- | :--- | :--- |\n`;
       (day.exercises || []).forEach((ex) => {
-        md += `| ${ex.body_part || "전신"} | ${ex.name} | ${ex.sets} | ${ex.reps} | ${ex.rir_guide} | ${ex.form_tips} |\n`;
+        const rirText = String(ex.rir_guide || "").replace(/RIR\s*/gi, "여유 ");
+        md += `| ${ex.body_part || "전신"} | ${ex.name} | ${ex.sets} | ${ex.reps} | ${rirText} | ${ex.form_tips} |\n`;
       });
       md += `\n`;
     });
