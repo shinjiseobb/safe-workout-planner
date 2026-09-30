@@ -127,11 +127,11 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
     achievement_level = user_profile.get("achievement_level")
 
     achievement_text_map = {
-        1: "1단계 (80% 미만 성취 - 피로 누적 / 계획 미달)",
-        2: "2단계 (90% 성취 - 아쉬운 완수 / 마지막 1~2회 미달)",
+        1: "1단계 (80% 미만 성취 - 피로 누적)",
+        2: "2단계 (90% 성취 - 아쉬운 완수)",
         3: "3단계 (100% 성취 - 계획대로 정규 세트/횟수 완벽 완수)",
-        4: "4단계 (110% 성취 - 여유 있는 초과 완수 / 1~2회 더 가능)",
-        5: "5단계 (120% 이상 성취 - 충분한 초과 달성 / 무게 가벼움)"
+        4: "4단계 (110% 성취 - 여유 있는 초과 완수)",
+        5: "5단계 (120% 이상 성취 - 충분한 초과)"
     }
 
     history_feedback_section = ""
@@ -262,7 +262,7 @@ def update_workout_history(previous_history: list, current_routine: dict, achiev
     - 10회 초과: 가장 오래된 첫 번째 기록을 지우고 최신 10회치 유지
     """
     achievement_map = {
-        1: "1단계 (80% 미만 성취 - 피로/미달)",
+        1: "1단계 (80% 미만 성취 - 피로 누적)",
         2: "2단계 (90% 성취 - 아쉬운 완수)",
         3: "3단계 (100% 정상 완수 - 계획 달성)",
         4: "4단계 (110% 초과 성취 - 여유 완료)",
