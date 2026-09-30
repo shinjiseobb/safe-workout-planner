@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnSpinner = submitBtn.querySelector(".btn-spinner");
   const hasRadiatingPain = document.getElementById("has_radiating_pain");
   const hasSurgery = document.getElementById("has_surgery");
+  const painLevelGroup = document.getElementById("painLevelGroup");
   const riskAlertText = document.getElementById("riskAlertText");
 
   // 신체 스펙 및 최초 사용자 영역 요소
@@ -95,12 +96,25 @@ document.addEventListener("DOMContentLoaded", () => {
     5: "5단계 (극심한 통증 - 즉각 진료 권고)"
   };
 
+  function updatePainLevelVisibility() {
+    const checkedPainAreas = document.querySelectorAll("input[name='pain_area']:checked");
+    if (!painLevelGroup) return;
+    if (checkedPainAreas.length > 0) {
+      painLevelGroup.classList.remove("hidden");
+    } else {
+      painLevelGroup.classList.add("hidden");
+    }
+    updateRiskState();
+  }
+
   function updateRiskState() {
-    const painVal = parseInt(painSlider.value, 10);
+    const checkedPainAreas = document.querySelectorAll("input[name='pain_area']:checked");
+    const hasCheckedPain = checkedPainAreas.length > 0;
+    const painVal = (hasCheckedPain && painSlider) ? parseInt(painSlider.value, 10) : 0;
     const hasRadiation = hasRadiatingPain ? hasRadiatingPain.checked : false;
     const hasSurg = hasSurgery ? hasSurgery.checked : false;
 
-    const isHighRisk = painVal >= 4 || hasRadiation || hasSurg;
+    const isHighRisk = (hasCheckedPain && painVal >= 4) || hasRadiation || hasSurg;
 
     if (isHighRisk) {
       submitBtn.disabled = true;
@@ -128,6 +142,11 @@ document.addEventListener("DOMContentLoaded", () => {
     updateRiskState();
   });
 
+  // 관절 통증 부위 체크박스 변경 시 통증 강도 슬라이더 표시/숨김
+  document.querySelectorAll("input[name='pain_area']").forEach((cb) => {
+    cb.addEventListener("change", updatePainLevelVisibility);
+  });
+
   if (hasRadiatingPain) {
     hasRadiatingPain.addEventListener("change", updateRiskState);
   }
@@ -151,6 +170,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 초기 상태 반영 (새로고침 시 브라우저 폼 복원 대응)
   updateRiskState();
+  updatePainLevelVisibility();
   updateFacilityNotesVisibility();
 
   // 1-1. 운동 일지 파일 첨부 및 성취도 평가 처리
@@ -257,6 +277,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     updateRiskState();
+    updatePainLevelVisibility();
     updateFacilityNotesVisibility();
   }
 
@@ -677,6 +698,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // 선택된 통증 부위 수집
     const painCheckboxes = document.querySelectorAll("input[name='pain_area']:checked");
     const painAreas = Array.from(painCheckboxes).map((cb) => cb.value);
+    const resolvedPainLevel = painAreas.length > 0 && painSlider ? parseInt(painSlider.value, 10) : 0;
 
     pendingPayload = {
       goal: document.getElementById("goal").value,
@@ -686,7 +708,7 @@ document.addEventListener("DOMContentLoaded", () => {
       environment: document.getElementById("environment").value,
       cardio_option: document.getElementById("cardio_option") ? document.getElementById("cardio_option").value : "none",
       pain_areas: painAreas,
-      pain_level: parseInt(painSlider.value, 10),
+      pain_level: resolvedPainLevel,
       has_radiating_pain: document.getElementById("has_radiating_pain").checked,
       has_surgery: document.getElementById("has_surgery").checked,
       notes: document.getElementById("notes").value.trim(),
@@ -792,7 +814,7 @@ document.addEventListener("DOMContentLoaded", () => {
         environment: document.getElementById("environment") ? document.getElementById("environment").value : "헬스장",
         cardio_option: document.getElementById("cardio_option") ? document.getElementById("cardio_option").value : "none",
         pain_areas: Array.from(document.querySelectorAll("input[name='pain_area']:checked")).map(cb => cb.value),
-        pain_level: painSlider ? parseInt(painSlider.value, 10) : 1,
+        pain_level: document.querySelectorAll("input[name='pain_area']:checked").length > 0 && painSlider ? parseInt(painSlider.value, 10) : 0,
         has_radiating_pain: hasRadiatingPain ? hasRadiatingPain.checked : false,
         has_surgery: hasSurgery ? hasSurgery.checked : false,
         notes: document.getElementById("notes") ? document.getElementById("notes").value.trim() : "",

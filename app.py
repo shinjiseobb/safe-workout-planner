@@ -362,8 +362,8 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
 - 1회 운동 시간: {user_profile.get('session_duration')}분
 - 장비 환경: {current_env}
 - 유산소 옵션: {cardio_desc_map.get(cardio_option, '미포함')}
-- 통증 및 불편 부위: {', '.join(user_profile.get('pain_areas', [])) if user_profile.get('pain_areas') else '없음'}
-- 통증 강도: {user_profile.get('pain_level')}단계 (1~5단계 중)
+- 통증 및 불편 부위: {', '.join(user_profile.get('pain_areas', [])) if user_profile.get('pain_areas') else '없음 (완전 건강)'}
+- 통증 강도: {f"{user_profile.get('pain_level')}단계 (1~5단계 중)" if user_profile.get('pain_level') and user_profile.get('pain_level') > 0 else '0단계 (통증 없음)'}
 - 헬스장 기구 특이사항: {facility_notes if facility_notes else '없음 (전체 이용 가능)'}
 - 기타 주의사항: {user_profile.get('notes', '없음')}{physical_info_text}
 
