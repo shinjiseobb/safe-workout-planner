@@ -341,6 +341,15 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
 - 환경이 '{current_env}'로 변경되었으므로, 해당 환경에서 구비 가능한 도구(덤벨/맨몸/밴드)에 완벽히 최적화된 종목으로 재배치하세요.
 """
 
+    facility_notes = user_profile.get("facility_notes", "").strip()
+    facility_rule = ""
+    if facility_notes and current_env == "헬스장":
+        facility_rule = f"""
+[★중요★ 이용 중인 헬스장 기구 특이사항 (사용자 제약)]:
+- 헬스장 특이사항: "{facility_notes}"
+- 사용자의 헬스장에 없는 것으로 명시된 기구는 절대로 처방하지 마십시오! 대체 가능한 다른 머신이나 프리웨이트(덤벨/바벨/케이블)를 활용하여 구성하세요.
+"""
+
     prompt = f"""
 당신은 부상 예방 및 재활 운동역학 전문 시니어 스트렝스 코치입니다.
 사용자가 오늘 당장 헬스장이나 집에서 수행해야 하는 **'오늘의 1일치 운동 세션'**만을 집중하여 작성하세요.
@@ -355,6 +364,7 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
 - 유산소 옵션: {cardio_desc_map.get(cardio_option, '미포함')}
 - 통증 및 불편 부위: {', '.join(user_profile.get('pain_areas', [])) if user_profile.get('pain_areas') else '없음'}
 - 통증 강도: {user_profile.get('pain_level')}단계 (1~5단계 중)
+- 헬스장 기구 특이사항: {facility_notes if facility_notes else '없음 (전체 이용 가능)'}
 - 기타 주의사항: {user_profile.get('notes', '없음')}{physical_info_text}
 
 [★이번 세션에 반드시 생성해야 하는 오늘의 타깃 일차★]
@@ -363,6 +373,7 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
 
 {history_feedback_section}
 {env_transition_rule}
+{facility_rule}
 {cardio_instruction}
 [실시간 웹 검색 레퍼런스 (Serper.dev 수집 데이터)]
 {search_context}
@@ -782,6 +793,7 @@ def generate_routine():
         has_radiating_pain = bool(data.get("has_radiating_pain", False))
         has_surgery = bool(data.get("has_surgery", False))
         notes = data.get("notes", "")
+        facility_notes = data.get("facility_notes", "")
         history = data.get("history", [])
         achievement_level = data.get("achievement_level")
         cardio_option = data.get("cardio_option", "none")
@@ -823,6 +835,7 @@ def generate_routine():
             "pain_areas": pain_areas,
             "pain_level": pain_level,
             "notes": notes,
+            "facility_notes": facility_notes,
             "history": history,
             "achievement_level": achievement_level,
             "user_height": user_height,

@@ -180,9 +180,9 @@
             <div class="form-group">
               <label for="environment">장비 및 운동 환경 <span class="required">*</span></label>
               <select id="environment" name="environment" required>
-                <option value="맨몸">맨몸 및 밴드 운동 (홈트레이닝)</option>
-                <option value="홈짐 덤벨" selected>홈짐 / 조절식 덤벨 환경</option>
-                <option value="헬스장">피트니스 센터 (머신 & 프리웨이트 풀옵션)</option>
+                <option value="맨몸">홈트레이닝 (맨몸 및 밴드 운동)</option>
+                <option value="홈짐 덤벨" selected>홈짐 (무게조절 덤벨)</option>
+                <option value="헬스장">헬스장 (머신 & 프리웨이트)</option>
               </select>
             </div>
             <div class="form-group">
@@ -239,6 +239,12 @@
               <input type="checkbox" id="has_surgery" name="has_surgery">
               <span>최근 6개월 이내 관절/척추 관련 수술 또는 시술을 받은 적이 있습니다.</span>
             </label>
+          </div>
+
+          <!-- 헬스장 기구 특이사항 (헬스장 환경 선택 시에만 동적 노출) -->
+          <div id="facilityNotesGroup" class="form-group hidden">
+            <label for="facility_notes">이용 중인 헬스장 기구 특이사항 (선택)</label>
+            <input type="text" id="facility_notes" name="facility_notes" placeholder="예: 랫풀다운 머신 없음, 스미스 머신만 있음, 덤벨 최대 20kg 등">
           </div>
 
           <!-- 추가 메모 -->

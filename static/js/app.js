@@ -20,6 +20,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const userWeightInput = document.getElementById("user_weight");
   const userStrengthInput = document.getElementById("user_strength");
 
+  // 운동 환경 및 기구 특이사항 요소
+  const environmentSelect = document.getElementById("environment");
+  const facilityNotesGroup = document.getElementById("facilityNotesGroup");
+  const facilityNotesInput = document.getElementById("facility_notes");
+
   // 결과 영역 요소
   const resultSection = document.getElementById("resultSection");
   const routineTitle = document.getElementById("routineTitle");
@@ -130,8 +135,23 @@ document.addEventListener("DOMContentLoaded", () => {
     hasSurgery.addEventListener("change", updateRiskState);
   }
 
+  // 헬스장 환경 선택 시 기구 특이사항 입력창 동적 표시/숨김
+  function updateFacilityNotesVisibility() {
+    if (!facilityNotesGroup || !environmentSelect) return;
+    if (environmentSelect.value === "헬스장") {
+      facilityNotesGroup.classList.remove("hidden");
+    } else {
+      facilityNotesGroup.classList.add("hidden");
+    }
+  }
+
+  if (environmentSelect) {
+    environmentSelect.addEventListener("change", updateFacilityNotesVisibility);
+  }
+
   // 초기 상태 반영 (새로고침 시 브라우저 폼 복원 대응)
   updateRiskState();
+  updateFacilityNotesVisibility();
 
   // 1-1. 운동 일지 파일 첨부 및 성취도 평가 처리
   const achievementMap = {
@@ -218,6 +238,10 @@ document.addEventListener("DOMContentLoaded", () => {
       hasSurgery.checked = Boolean(profile.has_surgery);
     }
 
+    if (facilityNotesInput && profile.facility_notes !== undefined) {
+      facilityNotesInput.value = profile.facility_notes;
+    }
+
     if (document.getElementById("notes") && profile.notes !== undefined) {
       document.getElementById("notes").value = profile.notes;
     }
@@ -233,6 +257,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     updateRiskState();
+    updateFacilityNotesVisibility();
   }
 
   if (workoutLogFileInput) {
@@ -656,6 +681,7 @@ document.addEventListener("DOMContentLoaded", () => {
       has_radiating_pain: document.getElementById("has_radiating_pain").checked,
       has_surgery: document.getElementById("has_surgery").checked,
       notes: document.getElementById("notes").value.trim(),
+      facility_notes: facilityNotesInput ? facilityNotesInput.value.trim() : "",
       history: loadedHistory,
       achievement_level: loadedHistory.length > 0 && achievementSlider ? parseInt(achievementSlider.value, 10) : null,
       user_height: userHeightInput && userHeightInput.value ? parseFloat(userHeightInput.value) : null,
@@ -761,6 +787,7 @@ document.addEventListener("DOMContentLoaded", () => {
         has_radiating_pain: hasRadiatingPain ? hasRadiatingPain.checked : false,
         has_surgery: hasSurgery ? hasSurgery.checked : false,
         notes: document.getElementById("notes") ? document.getElementById("notes").value.trim() : "",
+        facility_notes: facilityNotesInput ? facilityNotesInput.value.trim() : "",
         user_height: userHeightInput && userHeightInput.value ? parseFloat(userHeightInput.value) : null,
         user_weight: userWeightInput && userWeightInput.value ? parseFloat(userWeightInput.value) : null,
         user_strength: userStrengthInput ? userStrengthInput.value.trim() : ""
