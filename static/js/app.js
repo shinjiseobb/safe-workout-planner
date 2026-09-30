@@ -61,11 +61,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 1. 통증 슬라이더 및 고위험 신호 실시간 감시 로직
   const painDescriptions = {
-    1: "1점 (경미한 뻐근함)",
-    2: "2점 (가벼운 통증)",
-    3: "3점 (보통 통증, 세심한 주의 필요)",
-    4: "4점 (심한 통증 - 고위험 신호)",
-    5: "5점 (극심한 통증 - 즉각 진료 권고)"
+    1: "1단계 (경미한 뻐근함)",
+    2: "2단계 (가벼운 통증)",
+    3: "3단계 (보통 통증, 세심한 주의 필요)",
+    4: "4단계 (심한 통증 - 고위험 신호)",
+    5: "5단계 (극심한 통증 - 즉각 진료 권고)"
   };
 
   function updateRiskState() {
@@ -90,7 +90,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   painSlider.addEventListener("input", (e) => {
     const val = e.target.value;
-    painLevelText.textContent = painDescriptions[val] || `${val}점`;
+    painLevelText.textContent = painDescriptions[val] || `${val}단계`;
     if (val >= 4) {
       painLevelText.style.color = "#dc2626";
       painLevelText.style.backgroundColor = "#fee2e2";
@@ -179,7 +179,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (profile.pain_level !== undefined && painSlider) {
       const pLevel = parseInt(profile.pain_level, 10) || 1;
       painSlider.value = pLevel;
-      painLevelText.textContent = painDescriptions[pLevel] || `${pLevel}점`;
+      painLevelText.textContent = painDescriptions[pLevel] || `${pLevel}단계`;
       if (pLevel >= 4) {
         painLevelText.style.color = "#dc2626";
         painLevelText.style.backgroundColor = "#fee2e2";

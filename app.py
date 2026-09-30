@@ -53,14 +53,14 @@ if GEMINI_API_KEY:
 def check_hard_stop(pain_level: int, has_radiating_pain: bool, has_surgery: bool):
     """
     위험 케이스 차단 (Hard Stop) 검증 로직
-    - 통증 강도 4점 이상
+    - 통증 강도 4단계 이상
     - 방사통 및 저림 증상
     - 최근 수술 이력
     조건 중 하나라도 해당되면 즉각 AI 루틴 생성을 중단하고 전문의 진료 권고 안내를 반환합니다.
     """
     triggers = []
     if pain_level >= 4:
-        triggers.append(f"중증 통증 강도({pain_level}/5점)")
+        triggers.append(f"중증 통증 강도({pain_level}/5단계)")
     if has_radiating_pain:
         triggers.append("신경 압박 의심 증상(방사통 및 저림)")
     if has_surgery:
@@ -231,7 +231,7 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
 - 장비 환경: {user_profile.get('environment')}
 - 유산소 옵션: {cardio_desc_map.get(cardio_option, '미포함')}
 - 통증 및 불편 부위: {', '.join(user_profile.get('pain_areas', [])) if user_profile.get('pain_areas') else '없음'}
-- 통증 강도: {user_profile.get('pain_level')}/5점
+- 통증 강도: {user_profile.get('pain_level')}단계 (1~5단계 중)
 - 기타 주의사항: {user_profile.get('notes', '없음')}
 {history_feedback_section}
 {cardio_instruction}
@@ -627,7 +627,7 @@ def generate_routine():
         achievement_level = data.get("achievement_level")
         cardio_option = data.get("cardio_option", "none")
 
-        logger.info(f"[요청 수신] 목적: {goal}, 분할: {split_routine}, 환경: {environment}, 유산소: {cardio_option}, 통증: {pain_level}")
+        logger.info(f"[요청 수신] 목적: {goal}, 분할: {split_routine}, 환경: {environment}, 유산소: {cardio_option}, 통증: {pain_level}단계")
 
         # 0. 이용 비밀번호(PIN) 검증
         access_pin = str(data.get("access_pin", "")).strip()
