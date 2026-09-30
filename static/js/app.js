@@ -10,6 +10,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const submitBtn = document.getElementById("submitBtn");
   const btnText = submitBtn.querySelector(".btn-text");
   const btnSpinner = submitBtn.querySelector(".btn-spinner");
+  const hasRadiatingPain = document.getElementById("has_radiating_pain");
+  const hasSurgery = document.getElementById("has_surgery");
+  const riskAlertText = document.getElementById("riskAlertText");
 
   // 결과 영역 요소
   const resultSection = document.getElementById("resultSection");
@@ -47,7 +50,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // 현재 생성된 최신 루틴 데이터 캐시 (복사 및 다운로드용)
   let currentRoutineData = null;
 
-  // 1. 통증 슬라이더 레이블 실시간 동기화
+  // 1. 통증 슬라이더 및 고위험 신호 실시간 감시 로직
   const painDescriptions = {
     1: "1점 (경미한 뻐근함)",
     2: "2점 (가벼운 통증)",
@@ -55,6 +58,26 @@ document.addEventListener("DOMContentLoaded", () => {
     4: "4점 (심한 통증 - 고위험 신호)",
     5: "5점 (극심한 통증 - 즉각 진료 권고)"
   };
+
+  function updateRiskState() {
+    const painVal = parseInt(painSlider.value, 10);
+    const hasRadiation = hasRadiatingPain ? hasRadiatingPain.checked : false;
+    const hasSurg = hasSurgery ? hasSurgery.checked : false;
+
+    const isHighRisk = painVal >= 4 || hasRadiation || hasSurg;
+
+    if (isHighRisk) {
+      submitBtn.disabled = true;
+      submitBtn.classList.add("btn-risk-blocked");
+      btnText.textContent = "🚫 고위험 신호 감지: 생성 불가";
+      if (riskAlertText) riskAlertText.classList.remove("hidden");
+    } else {
+      submitBtn.disabled = false;
+      submitBtn.classList.remove("btn-risk-blocked");
+      btnText.textContent = "안전 맞춤 루틴 생성하기";
+      if (riskAlertText) riskAlertText.classList.add("hidden");
+    }
+  }
 
   painSlider.addEventListener("input", (e) => {
     const val = e.target.value;
@@ -66,7 +89,18 @@ document.addEventListener("DOMContentLoaded", () => {
       painLevelText.style.color = "#2563eb";
       painLevelText.style.backgroundColor = "#eff6ff";
     }
+    updateRiskState();
   });
+
+  if (hasRadiatingPain) {
+    hasRadiatingPain.addEventListener("change", updateRiskState);
+  }
+  if (hasSurgery) {
+    hasSurgery.addEventListener("change", updateRiskState);
+  }
+
+  // 초기 상태 반영 (새로고침 시 브라우저 폼 복원 대응)
+  updateRiskState();
 
   // 2. 탭 전환 처리
   tabBtns.forEach((btn) => {
@@ -113,9 +147,8 @@ document.addEventListener("DOMContentLoaded", () => {
       btnSpinner.classList.remove("hidden");
       btnText.textContent = "AI 안전 가이드 검색 및 루틴 생성 중...";
     } else {
-      submitBtn.disabled = false;
       btnSpinner.classList.add("hidden");
-      btnText.textContent = "안전 맞춤 루틴 생성하기";
+      updateRiskState();
     }
   }
 
@@ -296,6 +329,18 @@ document.addEventListener("DOMContentLoaded", () => {
   // 8. 폼 제출 이벤트 핸들러: 먼저 PIN 모달을 띄움
   plannerForm.addEventListener("submit", (e) => {
     e.preventDefault();
+
+    if (submitBtn.disabled) {
+      return;
+    }
+
+    const painVal = parseInt(painSlider.value, 10);
+    const hasRadiation = hasRadiatingPain ? hasRadiatingPain.checked : false;
+    const hasSurg = hasSurgery ? hasSurgery.checked : false;
+    if (painVal >= 4 || hasRadiation || hasSurg) {
+      updateRiskState();
+      return;
+    }
 
     const disclaimerCheckbox = document.getElementById("disclaimer_agree");
     if (!disclaimerCheckbox.checked) {

@@ -182,6 +182,15 @@
             </label>
           </div>
 
+          <!-- 고위험 실시간 차단 안내 상자 -->
+          <div id="riskAlertText" class="risk-alert-box hidden">
+            <span class="risk-alert-icon">🚫</span>
+            <div class="risk-alert-msg">
+              <strong>생성 불가 (전문의 진료 권고):</strong>
+              고위험 신호(통증 4점 이상, 방사통/저림, 수술 이력)가 감지되어 안전을 위해 AI 운동 루틴 생성이 자동 차단되었습니다. 병원 진료를 먼저 권장합니다.
+            </div>
+          </div>
+
           <!-- 생성 버튼 -->
           <button type="submit" id="submitBtn" class="btn btn-primary">
             <span class="btn-text">안전 맞춤 루틴 생성하기</span>

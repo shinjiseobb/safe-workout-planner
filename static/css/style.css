@@ -464,6 +464,47 @@ select:focus, input[type="text"]:focus {
   box-shadow: none;
 }
 
+/* 고위험 실시간 차단 안내 상자 */
+.risk-alert-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background-color: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  color: var(--danger-text);
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.1);
+  animation: fadeInAlert 0.25s ease-in-out;
+}
+
+.risk-alert-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.risk-alert-msg strong {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+@keyframes fadeInAlert {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.btn-primary.btn-risk-blocked {
+  background-color: #fee2e2 !important;
+  color: #991b1b !important;
+  border: 1px solid #fca5a5 !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+}
+
 .btn-outline {
   background-color: #ffffff;
   border: 1px solid var(--gray-300);
