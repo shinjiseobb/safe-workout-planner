@@ -215,6 +215,13 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    const accessPin = document.getElementById("access_pin").value.trim();
+    if (!accessPin) {
+      alert("이용 비밀번호 4자리를 입력해 주세요.");
+      document.getElementById("access_pin").focus();
+      return;
+    }
+
     // 선택된 통증 부위 수집
     const painCheckboxes = document.querySelectorAll("input[name='pain_area']:checked");
     const painAreas = Array.from(painCheckboxes).map((cb) => cb.value);
@@ -229,6 +236,7 @@ document.addEventListener("DOMContentLoaded", () => {
       pain_level: parseInt(painSlider.value, 10),
       has_radiating_pain: document.getElementById("has_radiating_pain").checked,
       has_surgery: document.getElementById("has_surgery").checked,
+      access_pin: accessPin,
       notes: document.getElementById("notes").value.trim()
     };
 

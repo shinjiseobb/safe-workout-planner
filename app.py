@@ -23,6 +23,7 @@ app = Flask(__name__)
 # 4. API Key 환경변수 확인
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 SERPER_API_KEY = os.getenv("SERPER_API_KEY")
+ACCESS_PIN = os.getenv("ACCESS_PIN", "0301")
 PORT = int(os.getenv("PORT", 5000))
 
 if not GEMINI_API_KEY:
@@ -250,6 +251,15 @@ def generate_routine():
         notes = data.get("notes", "")
 
         logger.info(f"[요청 수신] 목적: {goal}, 환경: {environment}, 통증강도: {pain_level}, 부위: {pain_areas}")
+
+        # 0. 이용 비밀번호(PIN) 검증
+        access_pin = str(data.get("access_pin", "")).strip()
+        if access_pin != ACCESS_PIN:
+            logger.warning(f"[접근 차단] 비밀번호 불일치: {access_pin}")
+            return jsonify({
+                "status": "error",
+                "message": "비밀번호가 일치하지 않습니다. 올바른 4자리 PIN을 입력해 주세요."
+            }), 403
 
         # 1. Hard Stop 로직 검증
         hard_stop_result = check_hard_stop(pain_level, has_radiating_pain, has_surgery)
