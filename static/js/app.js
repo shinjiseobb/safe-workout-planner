@@ -1089,10 +1089,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function openQrModal() {
     if (!qrModal || !qrCodeImg) return;
-    // 현재 접속 중인 풀 URL 생성
-    const currentUrl = encodeURIComponent(window.location.origin + window.location.pathname);
-    // Google Charts API 기반 선명하고 빠른 QR 코드 이미지 생성 (240x240)
-    qrCodeImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${currentUrl}`;
+
+    // 현재 호스트 주소 확인 (Preview 도메인이면 공개 공식 Production 도메인으로 스마트 정규화)
+    let targetOrigin = window.location.origin;
+    if (targetOrigin.includes("safe-workout-planner") && targetOrigin.includes("vercel.app")) {
+      targetOrigin = "https://safe-workout-planner.vercel.app";
+    }
+
+    const currentUrl = encodeURIComponent(targetOrigin + "/");
+    // 고화질 QR 코드 생성 (모바일 기본 카메라 인식 최적화)
+    qrCodeImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${currentUrl}`;
     qrModal.classList.remove("hidden");
   }
 
@@ -1108,13 +1114,21 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 모바일 기기(터치/폰/태블릿)인지 여부 확인
-  const isMobileDevice = /iphone|ipad|ipod|android|blackberry|mini|windows\sce|palm/i.test(window.navigator.userAgent.toLowerCase()) || (window.innerWidth <= 768);
+  // 모바일 기기(터치/스마트폰/태블릿) 여부 판별
+  const isMobileDevice = /iphone|ipad|ipod|android|blackberry|mini|windows\sce|palm/i.test(window.navigator.userAgent.toLowerCase()) || 
+                         (window.matchMedia && window.matchMedia("(max-width: 768px)").matches);
 
-  // 설치 버튼 클릭
+  // 설치 버튼 클릭 이벤트
   pwaInstallBtn.addEventListener("click", async () => {
+    // [데스크톱/PC 환경 최우선]: 스마트폰 설치용 QR 코드 팝업 띄우기
+    if (!isMobileDevice) {
+      openQrModal();
+      return;
+    }
+
+    // [모바일 환경]: 기기별 앱 설치/홈 화면 추가 플로우
     if (deferredInstallPrompt) {
-      // 1. 브라우저 네이티브 PWA 설치 프롬프트가 지원되는 경우 (안드로이드 크롬 등)
+      // 1. 안드로이드 크롬 등 네이티브 PWA 설치 프롬프트
       deferredInstallPrompt.prompt();
       const { outcome } = await deferredInstallPrompt.userChoice;
       if (outcome === "accepted") {
@@ -1122,13 +1136,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       deferredInstallPrompt = null;
     } else if (isIos) {
-      // 2. iOS 사파리 환경: 하단 공유 안내 툴팁 표시
+      // 2. iOS 사파리 환경: 하단 공유 안내 툴팁
       iosInstallTooltip.classList.toggle("hidden");
-    } else if (!isMobileDevice) {
-      // 3. PC/데스크톱 브라우저인 경우: QR 코드 팝업 모달을 띄워 스마트폰으로 간편 설치 유도
-      openQrModal();
     } else {
-      // 4. 기타 모바일 브라우저
+      // 3. 기타 모바일 브라우저 안내
       showToast("브라우저 메뉴(⋮)에서 '홈 화면에 추가' 또는 '앱 설치'를 클릭해 주세요.", "info", 4000);
     }
   });
