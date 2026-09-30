@@ -131,33 +131,28 @@ document.addEventListener("DOMContentLoaded", () => {
       const dayCard = document.createElement("div");
       dayCard.className = "day-card";
 
-      let exercisesHtml = `
-        <table class="exercise-table">
-          <thead>
-            <tr>
-              <th style="width: 28%;">종목명</th>
-              <th style="width: 15%;">세트</th>
-              <th style="width: 15%;">반복</th>
-              <th style="width: 20%;">강도 (RIR)</th>
-              <th style="width: 22%;">관절 보호 팁</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
+      let exercisesHtml = `<div class="exercise-list">`;
 
       (day.exercises || []).forEach((ex) => {
         exercisesHtml += `
-          <tr>
-            <td><strong>${escapeHtml(ex.name)}</strong></td>
-            <td>${escapeHtml(ex.sets)}</td>
-            <td>${escapeHtml(ex.reps)}</td>
-            <td><span class="rir-badge">${escapeHtml(ex.rir_guide)}</span></td>
-            <td><span class="form-tip-text">${escapeHtml(ex.form_tips)}</span></td>
-          </tr>
+          <div class="exercise-item-card">
+            <div class="ex-card-top">
+              <span class="ex-title">${escapeHtml(ex.name)}</span>
+              <span class="rir-badge">${escapeHtml(ex.rir_guide)}</span>
+            </div>
+            <div class="ex-specs-row">
+              <span class="spec-pill"><strong>세트</strong> ${escapeHtml(ex.sets)}</span>
+              <span class="spec-pill"><strong>반복</strong> ${escapeHtml(ex.reps)}</span>
+            </div>
+            <div class="ex-tip-box">
+              <span class="tip-badge">💡 관절 보호 자세 팁</span>
+              <p class="tip-content">${escapeHtml(ex.form_tips)}</p>
+            </div>
+          </div>
         `;
       });
 
-      exercisesHtml += `</tbody></table>`;
+      exercisesHtml += `</div>`;
 
       dayCard.innerHTML = `
         <div class="day-header">
