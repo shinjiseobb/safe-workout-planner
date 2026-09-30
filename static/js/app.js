@@ -369,7 +369,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const care = data.injury_prevention_care || {};
     const warmupItems = care.target_warmup || [];
     const cooldownItems = care.cooldown_routine || [];
-    const weeklySplit = data.weekly_split || [];
+
+    // 신규 1일치 today_workout이 있으면 단일 배열로 정규화, 없으면 weekly_split 폴백
+    let workoutDays = [];
+    if (data.today_workout && typeof data.today_workout === "object") {
+      workoutDays = [data.today_workout];
+    } else if (Array.isArray(data.weekly_split)) {
+      workoutDays = data.weekly_split;
+    }
 
     // STEP 1. 타깃 웜업 & 동적 스트레칭
     const step1Block = document.createElement("div");
@@ -404,12 +411,12 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
     routineFlowContainer.appendChild(step1Block);
 
-    // STEP 2. 본운동 (근력 / 머신 / 유산소)
+    // STEP 2. 본운동 (오늘의 1일치 세션)
     const step2Block = document.createElement("div");
     step2Block.className = "flow-step-block";
 
     let splitDaysHtml = `<div class="split-container">`;
-    weeklySplit.forEach((day) => {
+    workoutDays.forEach((day) => {
       let dayExercisesHtml = `<div class="exercise-list">`;
       (day.exercises || []).forEach((ex) => {
         const isSafeReplacement = Boolean(ex.is_replacement);
@@ -460,9 +467,9 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="step-header step-main-header">
         <div class="step-tag-row">
           <span class="step-badge badge-step2">STEP 2</span>
-          <span class="step-title">💪 본운동 (통증 관절 보호 안전 루틴)</span>
+          <span class="step-title">💪 오늘의 본운동 (관절 보호 1일치 집중 플랜)</span>
         </div>
-        <span class="step-desc">관절 통증 부위는 안전 대체 운동으로 자동 구성됨</span>
+        <span class="step-desc">오늘 당장 수행해야 할 1개 세션</span>
       </div>
       <div class="step-content-body">
         ${splitDaysHtml}
@@ -840,9 +847,16 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     md += `\n---\n\n`;
 
-    // STEP 2. 본운동
-    md += `## 💪 STEP 2. 본운동 (통증 관절 보호 안전 루틴)\n\n`;
-    (data.weekly_split || []).forEach((day) => {
+    // STEP 2. 본운동 (오늘의 1일치 집중 세션)
+    md += `## 💪 STEP 2. 오늘의 본운동 (관절 보호 1일치 집중 플랜)\n\n`;
+    let mdDays = [];
+    if (data.today_workout && typeof data.today_workout === "object") {
+      mdDays = [data.today_workout];
+    } else if (Array.isArray(data.weekly_split)) {
+      mdDays = data.weekly_split;
+    }
+
+    mdDays.forEach((day) => {
       md += `### ${day.day_name} (타깃: ${day.target_focus})\n`;
       md += `| 부위 | 종목명 | 중량 | 세트 | 반복 | 여유 횟수 | 관절 보호 팁 |\n`;
       md += `| :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n`;
@@ -850,6 +864,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const rirText = String(ex.rir_guide || "").replace(/RIR\s*/gi, "여유 ");
         const safeTag = ex.is_replacement ? " [🛡️관절보호 대체]" : "";
         const weightText = ex.weight || "-";
+        md += `| ${ex.body_part || "전신"} | ${ex.name}${safeTag} | ${weightText} | ${ex.sets} | ${ex.reps} | ${rirText} | ${ex.form_tips} |\n`;
       });
       md += `\n`;
     });

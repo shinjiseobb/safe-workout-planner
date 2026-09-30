@@ -127,8 +127,105 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
     if not gemini_client:
         raise ValueError("Gemini API Client가 올바르게 설정되지 않았습니다.")
 
+def get_next_split_target(split_routine: str, history: list) -> dict:
+    """
+    사용자의 분할 방식과 이전 누적 일지를 분석하여 이번 회차에 수행할 정확한 '오늘의 1일치' 대상 일차(Day N)를 자동 산정
+    """
+    split_plans = {
+        "무분할": [
+            {"day_num": 1, "day_name": "1일차 (전신)", "target_focus": "전신 주요 대근육 순환 및 관절 안전 루틴"}
+        ],
+        "2분할": [
+            {"day_num": 1, "day_name": "1일차 (상체)", "target_focus": "가슴, 등, 어깨, 팔 상체 복합 운동"},
+            {"day_num": 2, "day_name": "2일차 (하체)", "target_focus": "대퇴사두, 둔근, 햄스트링, 종아리 하체 집중 운동"}
+        ],
+        "3분할": [
+            {"day_num": 1, "day_name": "1일차 (밀기)", "target_focus": "가슴, 전면/측면 어깨, 삼두 밀기 패턴"},
+            {"day_num": 2, "day_name": "2일차 (당기기)", "target_focus": "광배근, 승모근, 후면 어깨, 이두 당기기 패턴"},
+            {"day_num": 3, "day_name": "3일차 (하체)", "target_focus": "대퇴사두, 햄스트링, 둔근 하체 전체 및 코어"}
+        ],
+        "4분할": [
+            {"day_num": 1, "day_name": "1일차 (밀기)", "target_focus": "가슴 및 삼두 밀기 집중"},
+            {"day_num": 2, "day_name": "2일차 (당기기)", "target_focus": "등 및 이두 당기기 집중"},
+            {"day_num": 3, "day_name": "3일차 (어깨·복근)", "target_focus": "어깨 삼각근 전체 및 코어/복근 집중"},
+            {"day_num": 4, "day_name": "4일차 (하체)", "target_focus": "하체 전체(앞/뒤/둔근) 집중"}
+        ]
+    }
+
+    plan_list = split_plans.get(split_routine, split_plans["2분할"])
+    cycle_len = len(plan_list)
+
+    if not history:
+        # 최초 사용자는 항상 1일차 시작
+        return plan_list[0]
+
+    # 지난 회차 분석
+    last_sess = history[-1]
+    last_exercises = last_sess.get("exercises", [])
+
+    # 직전 일차명 확인 (예: '1일차', '상체', '밀기' 등 추론)
+    last_day_str = ""
+    if last_exercises:
+        last_day_str = str(last_exercises[0].get("day", ""))
+
+    last_body_parts = [str(ex.get("body_part", "")) for ex in last_exercises]
+
+    last_index = 0
+    matched = False
+
+    # 1. 일차 문자열 매칭 시도
+    for idx, p in enumerate(plan_list):
+        if f"{p['day_num']}일차" in last_day_str:
+            last_index = idx
+            matched = True
+            break
+
+    # 2. 부위 키워드로 매칭 시도 (일차 문자열이 없을 때)
+    if not matched and last_body_parts:
+        bp_set = set(last_body_parts)
+        if split_routine == "2분할":
+            if "하체" in bp_set:
+                last_index = 1
+            else:
+                last_index = 0
+        elif split_routine == "3분할":
+            if "하체" in bp_set:
+                last_index = 2
+            elif "등" in bp_set:
+                last_index = 1
+            else:
+                last_index = 0
+        elif split_routine == "4분할":
+            if "하체" in bp_set:
+                last_index = 3
+            elif "어깨" in bp_set or "복근" in bp_set:
+                last_index = 2
+            elif "등" in bp_set:
+                last_index = 1
+            else:
+                last_index = 0
+        else:
+            last_index = (len(history) - 1) % cycle_len
+
+    # 다음 순번 계산
+    next_index = (last_index + 1) % cycle_len
+    return plan_list[next_index]
+
+
+def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dict:
+    """
+    Gemini Flash Lite 모델을 호출하여 오늘 수행할 딱 1일치(1세션)의 맞춤형 JSON 루틴 생성
+    (이전 운동 일지 기반 자동 순번 판정 및 성취도 피드백 반영)
+    """
+    if not gemini_client:
+        raise ValueError("Gemini API Client가 올바르게 설정되지 않았습니다.")
+
     history = user_profile.get("history") or []
     achievement_level = user_profile.get("achievement_level")
+    split_routine = user_profile.get("split_routine", "2분할")
+
+    # 오늘 수행할 1일치 대상 자동 계산
+    target_day_info = get_next_split_target(split_routine, history)
 
     achievement_text_map = {
         1: "1단계 (80% 미만 성취 - 피로 누적)",
@@ -140,15 +237,14 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
 
     history_feedback_section = ""
     if history and achievement_level:
-        split_routine = user_profile.get("split_routine", "3분할")
         cycle_size_map = {
             "무분할": 1,
             "2분할": 2,
             "3분할": 3,
             "4분할": 4
         }
-        cycle_size = cycle_size_map.get(split_routine, 3)
-        target_count = max(2, cycle_size * 2)  # 최근 2사이클 분량 (무분할: 2~3회, 2분할: 4회, 3분할: 6회, 4분할: 8회)
+        cycle_size = cycle_size_map.get(split_routine, 2)
+        target_count = max(2, cycle_size * 2)  # 최근 2사이클 분량
         recent_sessions = history[-target_count:]
 
         recent_summary_list = []
@@ -156,7 +252,6 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
             s_num = sess.get("session_num", "?")
             s_date = sess.get("date", "")
             raw_lvl = sess.get("achievement_level")
-            # 세션의 achievement_level이 None이고 직전 세션이면 사용자가 방금 전달한 achievement_level 적용
             if raw_lvl is None and sess == history[-1] and achievement_level is not None:
                 raw_lvl = achievement_level
             try:
@@ -165,7 +260,7 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
                 safe_lvl = 3
             s_desc = achievement_text_map.get(safe_lvl, f"{safe_lvl}단계")
             ex_details = [
-                f"{ex.get('body_part', '전신')}: {ex.get('name', '')} ({ex.get('sets', '')} {ex.get('reps', '')}, {ex.get('rir_guide', '')})"
+                f"{ex.get('body_part', '전신')}: {ex.get('name', '')} {ex.get('weight', '')} ({ex.get('sets', '')} {ex.get('reps', '')})"
                 for ex in sess.get("exercises", [])
             ]
             ex_summary_str = "; ".join(ex_details) if ex_details else "운동 기록 없음"
@@ -179,20 +274,18 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
             curr_lvl = 3
 
         history_feedback_section = f"""
-[사용자의 이전 누적 운동 이력 및 최근 2사이클({len(recent_sessions)}회차) 성취도 분석]
+[사용자의 이전 누적 운동 이력 및 최근 성취도 분석]
 - 누적 총 운동 횟수: 총 {len(history)}회차 보유
 - 직전 세션 평가 성취도: {achievement_text_map.get(curr_lvl, f'{curr_lvl}단계')}
-- 분석 대상 최근 2사이클 수행 이력:
+- 분석 대상 최근 수행 이력:
 {recent_history_text}
 
-[성취도 및 2사이클 기반 적응형(Adaptive) 중량/부하 자동 조정 지침]
-- 사용자가 선택한 {split_routine} 설정에 맞추어, 최근 2사이클 동안 각 부위별 수행 이력 및 성취도 추세를 종합 평가하세요.
+[성취도 기반 적응형(Adaptive) 중량/부하 자동 조정 지침]
 - 1단계 (80% 미만): 피로 누적 또는 실패. 중량을 10~20% 낮추거나(디로딩) 1세트를 줄이고, 관절에 부담이 없는 대체 동작으로 안전 마진을 확보하세요.
 - 2단계 (90%): 아쉬운 미달. 현재 중량/세트 구성을 그대로 동결 유지하고 자세 안정성에 집중하세요.
 - 3단계 (100%): 계획 완벽 소화. 현재 중량을 유지하거나 다관절 메인 종목에 한해 최소 단위(+1~2.5kg) 유지를 권장하세요.
 - 4단계 (110%): 여유 완료. 덤벨 운동은 +1~2kg, 바벨/머신 운동은 +2.5kg 소폭 증량을 처방하세요.
 - 5단계 (120% 이상): 매우 가벼움. 안전한 범위 내에서 +2.5kg~5kg 적극적 증량을 처방하세요.
-- 최근 2사이클 동안 연속으로 4~5단계를 기록한 종목은 안정적인 증량을 처방하고, 미달(1~2단계)이 반복된 부위는 부하를 낮추거나 안전 대체 동작으로 전환하세요.
 """
 
     # 유산소 운동 지침 생성
@@ -209,12 +302,10 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
 - 희망 유산소 유형: {cardio_desc_map.get(cardio_option, cardio_option)}
 - 장비 환경: {user_profile.get('environment')}
 - 유산소 지침:
-  1) 각 일차별 운동 리스트(exercises)에 유산소 종목을 1개 포함하고 body_part를 '유산소'로 표기하세요.
-  2) [환경별 종목 분기]:
-     - '헬스장' 환경: 인클라인 트레드밀 경사 걷기, 좌식/입식 실내 사이클, 일립티컬, 천국의 계단, 로잉머신 등 헬스장 전문 유산소 머신을 처방하세요.
-     - '맨몸' 또는 '홈짐 덤벨' 환경: 대형 기구가 없으므로 야외 러닝/조깅, 야외 파워워킹(빠른 걸음), 또는 층간소음 없는 실내 맨몸 저충격 유산소(슬로우 버피 등)를 처방하세요.
-  3) [관절 통증 보호 분기]:
-     - 무릎/허리/발목 통증이 있는 경우 착지 충격(Impact force)이 큰 러닝/점프를 엄격히 배제하고, 좌식 사이클, 일립티컬, 인클라인 트레드밀 완만한 경사 걷기, 야외 파워워킹 등 '관절 저충격(Low-Impact)' 유산소로 안전하게 배정하세요.
+  1) 오늘의 운동 리스트(exercises)에 유산소 종목을 1개 포함하고 body_part를 '유산소'로 표기하세요.
+  2) '헬스장': 인클라인 트레드밀, 사이클, 일립티컬, 천국의 계단, 로잉머신 등 전문 머신 처방.
+  3) '맨몸/홈짐': 실내 저충격 유산소(슬로우 버피 등) 또는 야외 파워워킹/조깅 처방.
+  4) 무릎/허리/발목 통증 시 충격이 큰 점프/러닝을 배제하고 '관절 저충격(Low-Impact)' 유산소로 배정.
 """
     else:
         cardio_instruction = "\n[유산소 지침]: 사용자가 유산소 미포함을 선택했으므로 순수 근력/웨이트 트레이닝 종목으로만 구성하세요."
@@ -230,7 +321,6 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
 - 체중: {f'{user_weight}kg' if user_weight else '미입력'}
 - 평소 다루는 무게/근력 상태: {user_strength if user_strength else '미입력'}"""
 
-    # 환경 변경 감지 및 기구 전환 규칙
     last_env = None
     if history:
         last_session = history[-1]
@@ -253,18 +343,24 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
 
     prompt = f"""
 당신은 부상 예방 및 재활 운동역학 전문 시니어 스트렝스 코치입니다.
-사용자의 신체 상태, 통증 부위, 운동 환경에 맞추어 관절 부담을 최소화한 맞춤형 운동 루틴을 작성하세요.
+사용자가 오늘 당장 헬스장이나 집에서 수행해야 하는 **'오늘의 1일치 운동 세션'**만을 집중하여 작성하세요.
+절대로 2일치나 3일치 등 전체 분할 표를 한 번에 작성하지 마세요. 오직 오늘 할 운동만 작성해야 합니다.
 
 [사용자 프로필 정보]
 - 운동 목적: {user_profile.get('goal')}
 - 숙련도: {user_profile.get('experience')}
-- 운동 분할 방식: {user_profile.get('split_routine', '2분할')}
+- 운동 분할 방식: {split_routine}
 - 1회 운동 시간: {user_profile.get('session_duration')}분
 - 장비 환경: {current_env}
 - 유산소 옵션: {cardio_desc_map.get(cardio_option, '미포함')}
 - 통증 및 불편 부위: {', '.join(user_profile.get('pain_areas', [])) if user_profile.get('pain_areas') else '없음'}
 - 통증 강도: {user_profile.get('pain_level')}단계 (1~5단계 중)
 - 기타 주의사항: {user_profile.get('notes', '없음')}{physical_info_text}
+
+[★이번 세션에 반드시 생성해야 하는 오늘의 타깃 일차★]
+- 오늘의 타깃: **{target_day_info['day_name']}** ({target_day_info['target_focus']})
+- 반드시 이 타깃 부위에 집중된 1일치 본운동 4~6종목만 작성하세요!
+
 {history_feedback_section}
 {env_transition_rule}
 {cardio_instruction}
@@ -272,47 +368,42 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
 {search_context}
 
 [작성 및 설계 핵심 원칙]
-1. [단일 정수(단일 숫자) 목표 횟수 필수 원칙]:
+1. [오늘의 1일치 집중 원칙]:
+   - 오늘 당장 수행할 단 하나의 일차({target_day_info['day_name']})에만 집중하여 4~6개의 알찬 본운동을 구성하세요.
+2. [단일 정수(단일 숫자) 목표 횟수 필수 원칙]:
    - '10~12회', '12-15회'와 같은 범위 표기를 절대로 하지 마세요!
    - 사용자가 세트를 수행하고 성취도를 명확히 판단할 수 있도록 반드시 '8회', '10회', '12회', '15회'와 같이 명확한 단일 숫자 하나로만 표기하세요. (유산소는 '15분' 또는 '20분')
-2. [종목별 권장 중량(kg) 명시 원칙]:
+3. [종목별 권장 중량(kg) 명시 원칙]:
    - 덤벨, 바벨, 핀머신, 케이블 등 중량을 다루는 모든 종목은 사용자의 신장/체중/근력 수준 및 이전 회차 기록을 바탕으로 구체적인 권장 중량(예: '10kg', '각 8kg', '25kg')을 반드시 지정하세요.
    - 맨몸 운동이나 밴드 운동인 경우 '자체 체중' 또는 '맨몸'으로 표기하세요.
-3. [관절 안전 최우선 원칙]:
-   - 통증 부위가 체크된 경우, 해당 관절에 전단력(Shear force)이나 압박 부하가 큰 일반 표준 운동을 배제하고, 반드시 관절 보호 대체 운동(예: 어깨 통증 시 플로어 프레스 or 뉴트럴 그립 머신 프레스, 무릎 통증 시 박스 스쿼트 or 레그 익스텐션 제한 각도)으로 본운동(exercises) 목록 자체에 직접 처방하세요.
-   - 통증이 전혀 없는 부위는 건강한 자극을 위한 일반 정석 복합 다관절 운동을 자신 있게 배정하세요.
-4. [스마트 종목 로테이션 규칙]:
-   - 동일한 분할이라도 이전 회차의 종목을 기계적으로 복사하지 말고, 메인 종목의 그립/각도 변주(예: 플랫 ➔ 인클라인, 와이드 ➔ 뉴트럴) 및 보조 종목(머신/덤벨/케이블)을 신선하게 로테이션하여 다양한 근섬유를 동원하세요.
-5. [단일 실전 플로우 통합 설계]:
-   - 웜업(동적 스트레칭)부터 본운동(근력/유산소), 쿨다운(정적 스트레칭)까지 사용자가 순서대로 바로 따라할 수 있도록 일관된 플로우로 구성하세요.
-6. [안전 여유 횟수]: 각 종목마다 무리한 실패 지점에 도달하지 않도록 여유 횟수(예: 여유 2~3회)를 명시하세요.
-7. [부위 표기]: 각 운동 종목에는 주요 대상 '부위(body_part)'를 가슴, 등, 어깨, 하체, 팔, 복근/코어, 유산소, 전신 중 하나로 명확히 표기하세요.
-8. 사용자가 선택한 운동 분할 방식('{user_profile.get('split_routine', '2분할')}')에 맞추어 weekly_split의 각 일차(day_name 및 target_focus)를 정확히 구성하세요.
+4. [관절 안전 최우선 원칙]:
+   - 통증 부위가 체크된 경우, 해당 관절에 전단력이나 압박 부하가 큰 일반 표준 운동을 배제하고, 반드시 관절 보호 대체 운동으로 본운동(exercises) 목록 자체에 직접 처방하세요.
+5. [스마트 종목 로테이션 규칙]:
+   - 동일한 분할이라도 이전 회차의 종목을 기계적으로 복사하지 말고, 메인 종목의 그립/각도 변주 및 보조 종목을 신선하게 로테이션하여 다양한 근섬유를 동원하세요.
+6. [안전 여유 횟수]: 각 종목마다 무리한 실패 지점에 도달하지 않도록 여유 횟수(예: 여유 2회)를 명시하세요.
 
 [반드시 준수할 출력 형식]
 아래 JSON 스키마를 만족하는 순수 JSON 형식으로만 응답하세요. 백틱(```json) 마크다운 문법을 제외하고 오직 유효한 JSON 문자열만 출력해야 합니다.
 
 {{
-  "routine_title": "루틴 제목 요약",
-  "summary_message": "사용자 맞춤 루틴의 설계 방향성 및 핵심 요약 2~3문장",
-  "weekly_split": [
-    {{
-      "day_name": "1일차 (예: 상체 안전 분할 또는 월요일)",
-      "target_focus": "주요 타깃 근육 및 관절 보호 콘셉트",
-      "exercises": [
-        {{
-          "body_part": "부위 (가슴 / 등 / 어깨 / 하체 / 팔 / 복근 / 유산소 중 택1)",
-          "name": "운동 종목명 (통증 부위는 관절 보호 안전 종목으로 직접 배치)",
-          "weight": "권장 중량 (예: 10kg, 각 7kg, 30kg, 맨몸 종목은 자체 체중)",
-          "sets": "3세트 또는 1세트",
-          "reps": "10회 또는 12회 (범위 표기 금지, 단일 정수 또는 15분)",
-          "rir_guide": "여유 2회 또는 여유 2~3회",
-          "is_replacement": true,
-          "form_tips": "관절 부담을 줄이는 안전 자세 핵심 포인트"
-        }}
-      ]
-    }}
-  ],
+  "routine_title": "루틴 제목 요약 (예: [2분할 2일차] 무릎 보호 하체 집중 강화 플랜)",
+  "summary_message": "오늘 진행할 세션의 설계 방향성 및 핵심 요약 2~3문장",
+  "today_workout": {{
+    "day_name": "{target_day_info['day_name']}",
+    "target_focus": "{target_day_info['target_focus']}",
+    "exercises": [
+      {{
+        "body_part": "부위 (가슴 / 등 / 어깨 / 하체 / 팔 / 복근 / 유산소 중 택1)",
+        "name": "운동 종목명 (통증 부위는 관절 보호 안전 종목으로 직접 배치)",
+        "weight": "권장 중량 (예: 10kg, 각 7kg, 30kg, 맨몸 종목은 자체 체중)",
+        "sets": "3세트 또는 1세트",
+        "reps": "10회 또는 12회 (범위 표기 금지, 단일 정수 또는 15분)",
+        "rir_guide": "여유 2회 또는 여유 2~3회",
+        "is_replacement": true,
+        "form_tips": "관절 부담을 줄이는 안전 자세 핵심 포인트"
+      }}
+    ]
+  }},
   "joint_friendly_replacements": [
     {{
       "standard_exercise": "통증을 유발하기 쉬운 기존 표준 운동명 (예: 바벨 벤치프레스)",
@@ -322,12 +413,12 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
   ],
   "injury_prevention_care": {{
     "target_warmup": [
-      "관절 가동성 및 활성화 웜업 동작 1 (15회 또는 30초 등 구체적 수치)",
-      "관절 가동성 및 활성화 웜업 동작 2 (15회 또는 30초 등 구체적 수치)"
+      "오늘 본운동 부위에 맞춘 관절 가동성 웜업 동작 1 (15회 또는 30초 등 구체적 수치)",
+      "오늘 본운동 부위에 맞춘 관절 가동성 웜업 동작 2 (15회 또는 30초 등 구체적 수치)"
     ],
-    "posture_collapse_warning": "반복 중 자세가 무너지거나 타깃 근육 대신 관절로 무게가 쏠릴 때 나타나는 징후",
+    "posture_collapse_warning": "오늘 운동 중 자세가 무너지거나 타깃 근육 대신 관절로 무게가 쏠릴 때 나타나는 징후",
     "cooldown_routine": [
-      "긴장된 길항근 및 관절 주변부 스트레칭 동작 1 (20~30초 유지 등)",
+      "오늘 사용한 근육 및 관절 주변부 스트레칭 동작 1 (20~30초 유지 등)",
       "호흡 및 긴장 완화 쿨다운 2"
     ]
   }}
@@ -556,9 +647,11 @@ def update_workout_history(previous_history: list, current_routine: dict, achiev
         "exercises": []
     }
 
-    for day in current_routine.get("weekly_split", []):
-        day_name = day.get("day_name", "")
-        for ex in day.get("exercises", []):
+    # 신규 단일 1일치(today_workout) 추출, 없으면 기존 weekly_split에서 폴백
+    today_data = current_routine.get("today_workout")
+    if today_data and isinstance(today_data, dict):
+        day_name = today_data.get("day_name", "오늘의 운동")
+        for ex in today_data.get("exercises", []):
             new_session["exercises"].append({
                 "day": day_name,
                 "body_part": ex.get("body_part", "전신"),
@@ -569,6 +662,20 @@ def update_workout_history(previous_history: list, current_routine: dict, achiev
                 "rir_guide": ex.get("rir_guide", ""),
                 "form_tips": ex.get("form_tips", "")
             })
+    else:
+        for day in current_routine.get("weekly_split", []):
+            day_name = day.get("day_name", "")
+            for ex in day.get("exercises", []):
+                new_session["exercises"].append({
+                    "day": day_name,
+                    "body_part": ex.get("body_part", "전신"),
+                    "name": ex.get("name", ""),
+                    "weight": ex.get("weight") or ("자체 체중" if ex.get("body_part") in ["유산소", "복근"] else "-"),
+                    "sets": ex.get("sets", ""),
+                    "reps": ex.get("reps", ""),
+                    "rir_guide": ex.get("rir_guide", ""),
+                    "form_tips": ex.get("form_tips", "")
+                })
 
     # 영구 누적 (제한 없이 계속 누적)
     history.append(new_session)
