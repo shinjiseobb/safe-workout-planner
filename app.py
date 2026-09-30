@@ -387,14 +387,19 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
 3. [종목별 권장 중량(kg) 명시 원칙]:
    - 덤벨, 바벨, 핀머신, 케이블 등 중량을 다루는 모든 종목은 사용자의 신장/체중/근력 수준 및 이전 회차 기록을 바탕으로 구체적인 권장 중량(예: '10kg', '각 8kg', '25kg')을 반드시 지정하세요.
    - 맨몸 운동이나 밴드 운동인 경우 '자체 체중' 또는 '맨몸'으로 표기하세요.
-4. [대체 운동(Replacement) 정밀 분류 및 원래 운동(replaced_from) 명시 원칙 - 매우 중요]:
+4. [대체 운동(Replacement) 정밀 분류 및 원래 운동(replaced_from) 환경 일치 원칙 - 매우 중요]:
    - 사용자의 상태에 따라 각 운동의 replacement_type과 replaced_from을 정확히 설정하세요:
      1) "joint_safe": 사용자가 체크한 통증 부위(목/어깨/허리/무릎 등)를 보호하기 위해 부하를 줄인 관절 안전 종목으로 대체한 경우. (통증 부위가 없을 때는 절대로 joint_safe를 쓰지 마세요!)
      2) "custom_request": 사용자가 입력한 헬스장 기구 특이사항(예: 특정 머신 없음)이나 기타 요청사항(피하고 싶은 동작)을 반영하여 대체한 경우.
      3) "none": 대체가 아닌 일반 표준 정상 종목인 경우.
+   - [★핵심★ 원래 운동(replaced_from)의 장비 환경 일치 필수 규칙]:
+     * replaced_from에는 대체 전 원래 수행했을 종목명을 적되, **반드시 현재 사용자의 장비 환경({current_env})에서 구비 가능한 도구 범위 내 종목**을 적어야 합니다!
+     * 환경이 '홈짐 덤벨'인 경우: 바벨이나 머신을 절대로 적지 마세요! 원래 운동도 '플랫 덤벨 벤치프레스', '덤벨 숄더프레스', '덤벨 스쿼트' 등 덤벨 종목으로 적으세요.
+     * 환경이 '맨몸'인 경우: '일반 푸시업', '맨몸 스쿼트', '체어 딥스' 등 맨몸 종목으로 적으세요.
+     * 환경이 '헬스장'인 경우에만: 바벨, 스미스머신, 랫풀다운 머신 등 전문 기구를 적으세요.
    - replacement_type이 "joint_safe" 또는 "custom_request"인 경우:
      * is_replacement는 true로 설정하세요.
-     * replaced_from에는 '대체되기 전 원래 수행했을 통상적인 표준 운동명'(예: '바벨 벤치프레스', '랫풀다운 머신', '바벨 백스쿼트')을 간결하게 작성하세요.
+     * replaced_from에 위 환경 규칙을 준수한 대체 전 원래 운동명을 간결하게 작성하세요.
    - replacement_type이 "none"인 경우:
      * is_replacement는 false, replaced_from은 null 또는 ""로 설정하세요.
 5. [스마트 종목 로테이션 규칙]:
@@ -420,14 +425,14 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
         "rir_guide": "여유 2회 또는 여유 2~3회",
         "is_replacement": false,
         "replacement_type": "none 또는 joint_safe 또는 custom_request",
-        "replaced_from": "대체 전 원래 운동명 (예: 바벨 벤치프레스, 대체 아닐 시 null)",
+        "replaced_from": "대체 전 원래 운동명 (현재 환경에 맞는 종목명, 대체 아닐 시 null)",
         "form_tips": "관절 부담을 줄이는 안전 자세 핵심 포인트"
       }}
     ]
   }},
   "joint_friendly_replacements": [
     {{
-      "standard_exercise": "통증을 유발하기 쉬운 기존 표준 운동명 (예: 바벨 벤치프레스)",
+      "standard_exercise": "통증을 유발하기 쉬운 기존 표준 운동명 (현재 환경 도구 기준)",
       "safe_replacement": "안전 대체 종목명 (예: 뉴트럴그립 덤벨 프레스 / 플로어 프레스)",
       "biomechanical_reason": "관절 전단력 및 회전근개 충돌 완화 원리 설명"
     }}
