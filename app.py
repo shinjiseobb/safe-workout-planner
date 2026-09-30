@@ -387,8 +387,16 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
 3. [종목별 권장 중량(kg) 명시 원칙]:
    - 덤벨, 바벨, 핀머신, 케이블 등 중량을 다루는 모든 종목은 사용자의 신장/체중/근력 수준 및 이전 회차 기록을 바탕으로 구체적인 권장 중량(예: '10kg', '각 8kg', '25kg')을 반드시 지정하세요.
    - 맨몸 운동이나 밴드 운동인 경우 '자체 체중' 또는 '맨몸'으로 표기하세요.
-4. [관절 안전 최우선 원칙]:
-   - 통증 부위가 체크된 경우, 해당 관절에 전단력이나 압박 부하가 큰 일반 표준 운동을 배제하고, 반드시 관절 보호 대체 운동으로 본운동(exercises) 목록 자체에 직접 처방하세요.
+4. [대체 운동(Replacement) 정밀 분류 및 원래 운동(replaced_from) 명시 원칙 - 매우 중요]:
+   - 사용자의 상태에 따라 각 운동의 replacement_type과 replaced_from을 정확히 설정하세요:
+     1) "joint_safe": 사용자가 체크한 통증 부위(목/어깨/허리/무릎 등)를 보호하기 위해 부하를 줄인 관절 안전 종목으로 대체한 경우. (통증 부위가 없을 때는 절대로 joint_safe를 쓰지 마세요!)
+     2) "custom_request": 사용자가 입력한 헬스장 기구 특이사항(예: 특정 머신 없음)이나 기타 요청사항(피하고 싶은 동작)을 반영하여 대체한 경우.
+     3) "none": 대체가 아닌 일반 표준 정상 종목인 경우.
+   - replacement_type이 "joint_safe" 또는 "custom_request"인 경우:
+     * is_replacement는 true로 설정하세요.
+     * replaced_from에는 '대체되기 전 원래 수행했을 통상적인 표준 운동명'(예: '바벨 벤치프레스', '랫풀다운 머신', '바벨 백스쿼트')을 간결하게 작성하세요.
+   - replacement_type이 "none"인 경우:
+     * is_replacement는 false, replaced_from은 null 또는 ""로 설정하세요.
 5. [스마트 종목 로테이션 규칙]:
    - 동일한 분할이라도 이전 회차의 종목을 기계적으로 복사하지 말고, 메인 종목의 그립/각도 변주 및 보조 종목을 신선하게 로테이션하여 다양한 근섬유를 동원하세요.
 6. [안전 여유 횟수]: 각 종목마다 무리한 실패 지점에 도달하지 않도록 여유 횟수(예: 여유 2회)를 명시하세요.
@@ -405,12 +413,14 @@ def generate_routine_with_gemini(user_profile: dict, search_context: str) -> dic
     "exercises": [
       {{
         "body_part": "부위 (가슴 / 등 / 어깨 / 하체 / 팔 / 복근 / 유산소 중 택1)",
-        "name": "운동 종목명 (통증 부위는 관절 보호 안전 종목으로 직접 배치)",
+        "name": "운동 종목명 (통증 또는 요청사항 반영 종목)",
         "weight": "권장 중량 (예: 10kg, 각 7kg, 30kg, 맨몸 종목은 자체 체중)",
         "sets": "3세트 또는 1세트",
         "reps": "10회 또는 12회 (범위 표기 금지, 단일 정수 또는 15분)",
         "rir_guide": "여유 2회 또는 여유 2~3회",
-        "is_replacement": true,
+        "is_replacement": false,
+        "replacement_type": "none 또는 joint_safe 또는 custom_request",
+        "replaced_from": "대체 전 원래 운동명 (예: 바벨 벤치프레스, 대체 아닐 시 null)",
         "form_tips": "관절 부담을 줄이는 안전 자세 핵심 포인트"
       }}
     ]
@@ -671,7 +681,10 @@ def update_workout_history(previous_history: list, current_routine: dict, achiev
                 "sets": ex.get("sets", ""),
                 "reps": ex.get("reps", ""),
                 "rir_guide": ex.get("rir_guide", ""),
-                "form_tips": ex.get("form_tips", "")
+                "form_tips": ex.get("form_tips", ""),
+                "is_replacement": bool(ex.get("is_replacement")),
+                "replacement_type": ex.get("replacement_type", "none"),
+                "replaced_from": ex.get("replaced_from")
             })
     else:
         for day in current_routine.get("weekly_split", []):
@@ -685,7 +698,10 @@ def update_workout_history(previous_history: list, current_routine: dict, achiev
                     "sets": ex.get("sets", ""),
                     "reps": ex.get("reps", ""),
                     "rir_guide": ex.get("rir_guide", ""),
-                    "form_tips": ex.get("form_tips", "")
+                    "form_tips": ex.get("form_tips", ""),
+                    "is_replacement": bool(ex.get("is_replacement")),
+                    "replacement_type": ex.get("replacement_type", "none"),
+                    "replaced_from": ex.get("replaced_from")
                 })
 
     # 영구 누적 (제한 없이 계속 누적)

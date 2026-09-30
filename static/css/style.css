@@ -762,7 +762,7 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
   margin-top: 1px;
 }
 
-/* 본운동 관절 대체 뱃지 */
+/* 본운동 대체 뱃지 및 원래 운동 표시 */
 .safe-replacement-tag {
   display: inline-flex;
   align-items: center;
@@ -774,6 +774,26 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
   padding: 2px 8px;
   border-radius: 4px;
   border: 1px solid #a7f3d0;
+}
+
+.custom-replacement-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background-color: #ede9fe;
+  color: #5b21b6;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid #ddd6fe;
+}
+
+.replaced-from-text {
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: #4b5563;
+  margin-left: 2px;
 }
 
 /* 자세 붕괴 주의 알림 상자 */

@@ -443,15 +443,23 @@ document.addEventListener("DOMContentLoaded", () => {
     let splitDaysHtml = `<div class="split-container">`;
     workoutDays.forEach((day) => {
       let dayExercisesHtml = `<div class="exercise-list">`;
-      (day.exercises || []).forEach((ex) => {
-        const isSafeReplacement = Boolean(ex.is_replacement);
+        let replacementTagHtml = "";
+        const repType = ex.replacement_type || (ex.is_replacement ? "joint_safe" : "none");
+        const replacedFrom = ex.replaced_from ? ` <span class="replaced-from-text">(기존: ${escapeHtml(ex.replaced_from)})</span>` : "";
+
+        if (repType === "joint_safe") {
+          replacementTagHtml = `<span class="safe-replacement-tag">🛡️ 관절 보호 대체${replacedFrom}</span>`;
+        } else if (repType === "custom_request") {
+          replacementTagHtml = `<span class="custom-replacement-tag">⚙️ 맞춤 요청 대체${replacedFrom}</span>`;
+        }
+
         dayExercisesHtml += `
           <div class="exercise-item-card">
             <div class="ex-card-top">
               <div class="ex-title-wrap">
                 ${ex.body_part ? `<span class="body-part-badge">${escapeHtml(ex.body_part)}</span>` : ""}
                 <span class="ex-title">${escapeHtml(ex.name)}</span>
-                ${isSafeReplacement ? `<span class="safe-replacement-tag">🛡️ 관절 보호 대체</span>` : ""}
+                ${replacementTagHtml}
               </div>
               <span class="rir-badge">${escapeHtml(ex.rir_guide || "").replace(/RIR\s*/gi, "여유 ")}</span>
             </div>
@@ -889,7 +897,14 @@ document.addEventListener("DOMContentLoaded", () => {
       md += `| :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n`;
       (day.exercises || []).forEach((ex) => {
         const rirText = String(ex.rir_guide || "").replace(/RIR\s*/gi, "여유 ");
-        const safeTag = ex.is_replacement ? " [🛡️관절보호 대체]" : "";
+        let safeTag = "";
+        const repType = ex.replacement_type || (ex.is_replacement ? "joint_safe" : "none");
+        const fromInfo = ex.replaced_from ? ` (기존: ${ex.replaced_from})` : "";
+        if (repType === "joint_safe") {
+          safeTag = ` [🛡️관절보호 대체${fromInfo}]`;
+        } else if (repType === "custom_request") {
+          safeTag = ` [⚙️맞춤요청 대체${fromInfo}]`;
+        }
         const weightText = ex.weight || "-";
         md += `| ${ex.body_part || "전신"} | ${ex.name}${safeTag} | ${weightText} | ${ex.sets} | ${ex.reps} | ${rirText} | ${ex.form_tips} |\n`;
       });
